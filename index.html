@@ -3,119 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EcoSim V15 - Graph & HUD</title>
+    <title>EcoSim V15 - Logic Restored</title>
     <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            background-color: #020202;
-            font-family: 'Segoe UI', Roboto, monospace;
-            color: #ccc;
-        }
+        body { margin: 0; overflow: hidden; background-color: #020202; font-family: 'Segoe UI', Roboto, monospace; color: #ccc; }
         canvas { display: block; }
         
-        /* --- 1. STATUS HUD (Top Left) --- */
-        #hud {
-            position: absolute;
-            top: 15px;
-            left: 15px;
-            background: rgba(10, 10, 10, 0.8);
-            border: 1px solid #333;
-            border-radius: 6px;
-            padding: 10px 15px;
-            pointer-events: none; /* Let clicks pass through */
-            user-select: none;
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-            font-family: 'Courier New', monospace;
-            font-weight: bold;
-            z-index: 50;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
-        }
+        /* HUD & UI STYLES (Same as before) */
+        #hud { position: absolute; top: 15px; left: 15px; background: rgba(10, 10, 10, 0.8); border: 1px solid #333; border-radius: 6px; padding: 10px 15px; pointer-events: none; user-select: none; display: flex; flex-direction: column; gap: 5px; font-family: 'Courier New', monospace; font-weight: bold; z-index: 50; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
         .hud-row { display: flex; justify-content: space-between; min-width: 180px; }
         .hud-label { display: flex; align-items: center; gap: 8px; }
         .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
         .dot-prey { background: #00ccff; box-shadow: 0 0 5px #00ccff; }
         .dot-pred { background: #ff2222; box-shadow: 0 0 5px #ff2222; }
         .hud-fps { font-size: 0.8rem; color: #666; margin-top: 5px; border-top: 1px solid #333; padding-top: 5px;}
-
-        /* --- 2. POPULATION GRAPH (Bottom Left) --- */
-        #graph-container {
-            position: absolute;
-            bottom: 15px;
-            left: 15px;
-            width: 300px;
-            height: 100px;
-            background: rgba(10, 10, 10, 0.8);
-            border: 1px solid #333;
-            border-radius: 6px;
-            z-index: 40;
-            pointer-events: none;
-        }
+        #graph-container { position: absolute; bottom: 15px; left: 15px; width: 300px; height: 100px; background: rgba(10, 10, 10, 0.8); border: 1px solid #333; border-radius: 6px; z-index: 40; pointer-events: none; }
         #graphCanvas { width: 100%; height: 100%; display: block; border-radius: 6px; }
-
-        /* --- 3. CONTROL PANEL (Slide-out) --- */
-        #controls-btn {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            padding: 8px 16px;
-            background: #333;
-            border: 1px solid #555;
-            color: #fff;
-            cursor: pointer;
-            border-radius: 4px;
-            z-index: 60;
-            font-size: 0.8rem;
-            text-transform: uppercase;
-        }
+        #controls-btn { position: absolute; top: 15px; right: 15px; padding: 8px 16px; background: #333; border: 1px solid #555; color: #fff; cursor: pointer; border-radius: 4px; z-index: 60; font-size: 0.8rem; text-transform: uppercase; }
         #controls-btn:hover { background: #444; }
-
-        #panel {
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 300px;
-            height: 100vh;
-            background: rgba(12, 12, 12, 0.98);
-            border-left: 1px solid #333;
-            display: flex;
-            flex-direction: column;
-            box-shadow: -5px 0 20px rgba(0,0,0,0.8);
-            transition: transform 0.3s ease;
-            transform: translateX(100%); /* Hidden by default */
-            overflow-y: auto;
-            z-index: 55;
-        }
+        #panel { position: absolute; top: 0; right: 0; width: 300px; height: 100vh; background: rgba(12, 12, 12, 0.98); border-left: 1px solid #333; display: flex; flex-direction: column; box-shadow: -5px 0 20px rgba(0,0,0,0.8); transition: transform 0.3s ease; transform: translateX(100%); overflow-y: auto; z-index: 55; }
         #panel.open { transform: translateX(0); }
-
         .header { padding: 15px; background: #181818; border-bottom: 1px solid #333; }
         .header h2 { margin: 0; font-size: 0.9rem; color: #eee; text-transform: uppercase; }
-        
         .content { padding: 15px; padding-bottom: 50px; }
         .section { margin-bottom: 20px; border-bottom: 1px solid #222; padding-bottom: 10px; }
         .section-title { font-size: 0.7rem; color: #666; text-transform: uppercase; margin-bottom: 10px; font-weight: bold; }
-
         .control-group { margin-bottom: 10px; }
         .control-label { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 3px; color: #bbb; }
         .val-display { color: #00ccff; font-family: monospace; }
-
-        input[type=range] {
-            width: 100%; height: 4px; background: #333; border-radius: 2px; appearance: none; cursor: pointer;
-        }
-        input[type=range]::-webkit-slider-thumb {
-            appearance: none; width: 14px; height: 14px; background: #00ccff; border-radius: 50%; cursor: pointer; border: 1px solid #000;
-        }
-
+        input[type=range] { width: 100%; height: 4px; background: #333; border-radius: 2px; appearance: none; cursor: pointer; }
+        input[type=range]::-webkit-slider-thumb { appearance: none; width: 14px; height: 14px; background: #00ccff; border-radius: 50%; cursor: pointer; border: 1px solid #000; }
         .btn-row { display: flex; gap: 10px; margin-top: 20px; }
-        button.action-btn {
-            flex: 1; padding: 10px; border: none; border-radius: 4px; cursor: pointer;
-            font-weight: bold; font-size: 0.8rem; text-transform: uppercase; color: #fff;
-        }
+        button.action-btn { flex: 1; padding: 10px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.8rem; text-transform: uppercase; color: #fff; }
         .btn-blue { background: #0055aa; } .btn-blue:hover { background: #0066cc; }
         .btn-gray { background: #333; } .btn-gray:hover { background: #444; }
-
     </style>
 </head>
 <body>
@@ -140,140 +60,68 @@
         <canvas id="graphCanvas" width="300" height="100"></canvas>
     </div>
 
-    <!-- TOGGLE BUTTON -->
+    <!-- CONTROLS -->
     <button id="controls-btn" onclick="togglePanel()">Settings</button>
-
-    <!-- CONTROL PANEL (Right Side) -->
     <div id="panel">
         <div class="header"><h2>Parameters</h2></div>
         <div class="content">
-            
-            <div class="section">
-                <div class="section-title">Initial Density</div>
-                <div class="control-group">
-                    <div class="control-label">Prey % <span class="val-display" id="lbl-densityPrey"></span></div>
-                    <input type="range" id="in-densityPrey" min="0.05" max="1.0" step="0.05">
-                </div>
-                <div class="control-group">
-                    <div class="control-label">Pred % <span class="val-display" id="lbl-densityPred"></span></div>
-                    <input type="range" id="in-densityPred" min="0.005" max="0.05" step="0.005">
-                </div>
-            </div>
-
-            <div class="section">
-                <div class="section-title">Prey Stats</div>
-                <div class="control-group">
-                    <div class="control-label">Metabolism <span class="val-display" id="lbl-preyMetabolism"></span></div>
-                    <input type="range" id="in-preyMetabolism" min="0.01" max="0.5" step="0.01">
-                </div>
-                <div class="control-group">
-                    <div class="control-label">Birth Cost <span class="val-display" id="lbl-preyBirthCost"></span></div>
-                    <input type="range" id="in-preyBirthCost" min="10" max="150" step="5">
-                </div>
-                <div class="control-group">
-                    <div class="control-label">Food Energy <span class="val-display" id="lbl-preyGainFood"></span></div>
-                    <input type="range" id="in-preyGainFood" min="5" max="100" step="5">
-                </div>
-            </div>
-
-            <div class="section">
-                <div class="section-title">Predator Stats</div>
-                <div class="control-group">
-                    <div class="control-label">Metabolism <span class="val-display" id="lbl-predMetabolism"></span></div>
-                    <input type="range" id="in-predMetabolism" min="0.1" max="1.5" step="0.05">
-                </div>
-                <div class="control-group">
-                    <div class="control-label">Birth Cost <span class="val-display" id="lbl-predBirthCost"></span></div>
-                    <input type="range" id="in-predBirthCost" min="100" max="400" step="10">
-                </div>
-                <div class="control-group">
-                    <div class="control-label">Hunt Fatigue <span class="val-display" id="lbl-predHuntCost"></span></div>
-                    <input type="range" id="in-predHuntCost" min="0" max="10" step="1">
-                </div>
-            </div>
-            
-            <div class="section">
-                <div class="section-title">Environment</div>
-                <div class="control-group">
-                    <div class="control-label">Food Spawn <span class="val-display" id="lbl-foodSpawnRate"></span></div>
-                    <input type="range" id="in-foodSpawnRate" min="1" max="50" step="1">
-                </div>
-            </div>
-
-            <div class="btn-row">
-                <button class="action-btn btn-gray" id="btn-pause" onclick="togglePause()">Pause</button>
-                <button class="action-btn btn-blue" onclick="restartSim()">Apply & Reset</button>
-            </div>
+            <!-- Settings Inputs (IDs match script) -->
+            <div class="section"><div class="section-title">Initial Density</div><div class="control-group"><div class="control-label">Prey % <span class="val-display" id="lbl-densityPrey"></span></div><input type="range" id="in-densityPrey" min="0.05" max="1.0" step="0.05"></div><div class="control-group"><div class="control-label">Pred % <span class="val-display" id="lbl-densityPred"></span></div><input type="range" id="in-densityPred" min="0.005" max="0.05" step="0.005"></div></div>
+            <div class="section"><div class="section-title">Prey Stats</div><div class="control-group"><div class="control-label">Metabolism <span class="val-display" id="lbl-preyMetabolism"></span></div><input type="range" id="in-preyMetabolism" min="0.01" max="0.5" step="0.01"></div><div class="control-group"><div class="control-label">Birth Cost <span class="val-display" id="lbl-preyBirthCost"></span></div><input type="range" id="in-preyBirthCost" min="10" max="150" step="5"></div><div class="control-group"><div class="control-label">Food Energy <span class="val-display" id="lbl-preyGainFood"></span></div><input type="range" id="in-preyGainFood" min="5" max="100" step="5"></div></div>
+            <div class="section"><div class="section-title">Predator Stats</div><div class="control-group"><div class="control-label">Metabolism <span class="val-display" id="lbl-predMetabolism"></span></div><input type="range" id="in-predMetabolism" min="0.1" max="1.5" step="0.05"></div><div class="control-group"><div class="control-label">Birth Cost <span class="val-display" id="lbl-predBirthCost"></span></div><input type="range" id="in-predBirthCost" min="100" max="400" step="10"></div><div class="control-group"><div class="control-label">Hunt Fatigue <span class="val-display" id="lbl-predHuntCost"></span></div><input type="range" id="in-predHuntCost" min="0" max="10" step="1"></div></div>
+            <div class="section"><div class="section-title">Environment</div><div class="control-group"><div class="control-label">Food Spawn <span class="val-display" id="lbl-foodSpawnRate"></span></div><input type="range" id="in-foodSpawnRate" min="1" max="50" step="1"></div></div>
+            <div class="btn-row"><button class="action-btn btn-gray" id="btn-pause" onclick="togglePause()">Pause</button><button class="action-btn btn-blue" onclick="restartSim()">Apply & Reset</button></div>
         </div>
     </div>
 
     <canvas id="simCanvas"></canvas>
 
 <script>
-/**
- * CONFIGURATION
- */
 const DEFAULT_CONF = {
-    densityPrey: 0.001,  
-    densityPred: 0.0001, 
-    
-    preyMetabolism: 0.18,   
-    preyBirthCost: 90,      
-    preyGainFood: 10,       
-    
-    predMetabolism: 0.40,    
-    predBirthCost: 390,     
-    predHuntCost: 5,        
-    
+    densityPrey: 0.001, densityPred: 0.0001, 
+    preyMetabolism: 0.18, preyBirthCost: 90, preyGainFood: 10,       
+    predMetabolism: 0.40, predBirthCost: 390, predHuntCost: 5,        
     foodSpawnRate: 9,       
-
-    // Constants
     densityRock: 0.08,
     visionRange: 60,
-    preyLife: 600,
-    preyEnergyMax: 120,
-    preyBirthThresh: 0.80,
-    predLife: 500,
-    predEnergyMax: 400,
-    predBirthThresh: 0.95,
-    predReproCooldown: 300,
-    predGainPrey: 120
+    preyLife: 600, preyEnergyMax: 120, preyBirthThresh: 0.80,
+    predLife: 500, predEnergyMax: 400, predBirthThresh: 0.95,
+    predReproCooldown: 300, predGainPrey: 120
 };
 
 let CONF = { ...DEFAULT_CONF };
+let VISION_SQ = CONF.visionRange * CONF.visionRange;
 
 const GRID_SIZE = 5; 
-const TARGET_FPS = 30;
 const COLORS = {
     bg: '#020202', rock: '#1a1a1a', food: '#003300', 
     prey: '#00ccff', preyPanic: '#ffffff', 
     predStalk: '#550000', predHunt: '#ff0000', sleep: '#ffff00'
 };
 
-// --- GLOBALS ---
-let canvas, ctx;
-let graphCanvas, graphCtx;
+let canvas, ctx, graphCanvas, graphCtx, bgCanvas, bgCtx;
 let grid, cols, rows;
 let entities = [];
 let isPaused = false;
 
-// FPS Counting
-let lastTime = 0;
-let frameCount = 0;
-let fpsTimer = 0;
+// --- OPTIMIZATION VARS ---
+// Fix 1: Sector Size must equal Vision Range to ensure full visibility
+// If Vision is 60 and sector is 60, checking neighbors covers -60 to +60, which is safe.
+let sectors = [];
+let sCols, sRows;
+let SECTOR_SIZE; // Will be set to visionRange
 
-// Graph Data
-let popHistory = [];
-const MAX_HISTORY = 300; // Width of graph
-
-// --- UI INIT ---
+// FPS & Graph
+let lastTime = 0, frameCount = 0, fpsTimer = 0;
+let popHistory = [], MAX_HISTORY = 300; 
 
 window.onload = () => {
     canvas = document.getElementById('simCanvas');
-    ctx = canvas.getContext('2d');
-    
+    ctx = canvas.getContext('2d', { alpha: false });
     graphCanvas = document.getElementById('graphCanvas');
     graphCtx = graphCanvas.getContext('2d');
+    bgCanvas = document.createElement('canvas');
+    bgCtx = bgCanvas.getContext('2d');
 
     setupUI();
     window.addEventListener('resize', resizeCanvas);
@@ -287,23 +135,17 @@ function setupUI() {
         const label = document.getElementById('lbl-' + key);
         let val = CONF[key];
         if (isPercentage) val *= 100; 
-        val = parseFloat(val.toPrecision(6));
-        input.value = val;
-        
-        const updateLabel = () => {
-            let v = parseFloat(input.value);
-            label.innerText = v + (isPercentage ? '%' : '');
-        };
+        input.value = parseFloat(val.toPrecision(6));
+        const updateLabel = () => label.innerText = input.value + (isPercentage ? '%' : '');
         updateLabel();
-
         input.oninput = () => {
             updateLabel();
             let newVal = parseFloat(input.value);
             if (isPercentage) newVal /= 100;
             CONF[key] = newVal;
+            if(key === 'visionRange') VISION_SQ = CONF.visionRange * CONF.visionRange;
         };
     };
-
     bind('densityPrey', true); bind('densityPred', true);
     bind('preyMetabolism'); bind('preyBirthCost'); bind('preyGainFood');
     bind('predMetabolism'); bind('predBirthCost'); bind('predHuntCost');
@@ -313,108 +155,72 @@ function setupUI() {
 function resizeCanvas() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
+    bgCanvas.width = canvas.width;
+    bgCanvas.height = canvas.height;
     restartSim();
 }
 
-function togglePanel() {
-    document.getElementById('panel').classList.toggle('open');
-}
-
+function togglePanel() { document.getElementById('panel').classList.toggle('open'); }
 function togglePause() {
     isPaused = !isPaused;
-    const btn = document.getElementById('btn-pause');
-    btn.innerText = isPaused ? "Resume" : "Pause";
+    document.getElementById('btn-pause').innerText = isPaused ? "Resume" : "Pause";
 }
 
 function restartSim() {
     cols = Math.ceil(canvas.width / GRID_SIZE);
     rows = Math.ceil(canvas.height / GRID_SIZE);
     
+    // OPTIMIZATION: Set Sector Size to Vision Range (in grid units)
+    SECTOR_SIZE = Math.ceil(CONF.visionRange); 
+    sCols = Math.ceil(cols / SECTOR_SIZE);
+    sRows = Math.ceil(rows / SECTOR_SIZE);
+
     grid = {
         terrain: new Array(cols).fill(0).map(() => new Array(rows).fill(null)),
         entities: new Array(cols).fill(0).map(() => new Array(rows).fill(null))
     };
     entities = [];
-    popHistory = []; // Clear graph
+    popHistory = [];
     
     const total = cols * rows;
-    
     spawnTerrain('rock', total * CONF.densityRock);
     spawnTerrain('food', total * 0.15);
+    spawnEntity('prey', Math.max(1, Math.floor(total * CONF.densityPrey)));
+    spawnEntity('predator', Math.max(1, Math.floor(total * CONF.densityPred)));
     
-    let pCount = Math.max(1, Math.floor(total * CONF.densityPrey));
-    let predCount = Math.max(1, Math.floor(total * CONF.densityPred));
-    
-    spawnEntity('prey', pCount);
-    spawnEntity('predator', predCount);
+    drawStaticBackground();
 }
-
-// --- GRAPH LOGIC ---
 
 function updateGraph(preyCount, predCount) {
-    // Add new data point
     popHistory.push({ p: preyCount, r: predCount });
     if(popHistory.length > MAX_HISTORY) popHistory.shift();
-
-    // Draw Graph
-    const w = graphCanvas.width;
-    const h = graphCanvas.height;
+    const w = graphCanvas.width, h = graphCanvas.height;
     graphCtx.clearRect(0, 0, w, h);
-
-    // Find max for scaling (Dynamic Y-axis)
-    let maxVal = 10; // Minimum scale
-    for(let d of popHistory) {
-        if(d.p > maxVal) maxVal = d.p;
-        if(d.r > maxVal) maxVal = d.r;
-    }
-
-    // Helper to map value to Y coord
+    let maxVal = 10;
+    for(let d of popHistory) { maxVal = Math.max(maxVal, d.p, d.r); }
     const getY = (val) => h - ((val / maxVal) * (h - 10)) - 5; 
     const getX = (i) => (i / (MAX_HISTORY-1)) * w;
-
     if(popHistory.length < 2) return;
 
-    // Draw Prey Line (Blue)
-    graphCtx.beginPath();
-    graphCtx.strokeStyle = '#00ccff';
-    graphCtx.lineWidth = 2;
-    graphCtx.moveTo(0, getY(popHistory[0].p));
-    for(let i=1; i<popHistory.length; i++) {
-        graphCtx.lineTo(getX(i), getY(popHistory[i].p));
-    }
-    graphCtx.stroke();
-
-    // Draw Pred Line (Red)
-    graphCtx.beginPath();
-    graphCtx.strokeStyle = '#ff2222';
-    graphCtx.lineWidth = 2;
-    graphCtx.moveTo(0, getY(popHistory[0].r));
-    for(let i=1; i<popHistory.length; i++) {
-        graphCtx.lineTo(getX(i), getY(popHistory[i].r));
-    }
-    graphCtx.stroke();
+    const drawLine = (prop, color) => {
+        graphCtx.beginPath(); graphCtx.strokeStyle = color; graphCtx.lineWidth = 2;
+        graphCtx.moveTo(0, getY(popHistory[0][prop]));
+        for(let i=1; i<popHistory.length; i++) graphCtx.lineTo(getX(i), getY(popHistory[i][prop]));
+        graphCtx.stroke();
+    };
+    drawLine('p', '#00ccff'); drawLine('r', '#ff2222');
 }
 
-// --- GAME LOGIC ---
+// --- CORE SIMULATION ---
 
 class Entity {
     constructor(x, y, type) {
         this.x = x; this.y = y; this.type = type; 
         this.dead = false; this.age = 0;
         this.maxAge = (type === 'prey') ? CONF.preyLife : CONF.predLife;
-        
-        if (type === 'prey') {
-            this.energy = 60;
-            this.maxEnergy = CONF.preyEnergyMax;
-        } else {
-            this.energy = 250; 
-            this.maxEnergy = CONF.predEnergyMax;
-        }
-        
-        this.stamina = 100;
-        this.isSleeping = false;
-        this.sleepTimer = 0;
-        this.reproTimer = 0; 
+        this.energy = (type === 'prey') ? 60 : 250;
+        this.maxEnergy = (type === 'prey') ? CONF.preyEnergyMax : CONF.predEnergyMax;
+        this.stamina = 100; this.isSleeping = false; this.sleepTimer = 0; this.reproTimer = 0; 
         this.state = 'idle'; 
     }
 }
@@ -427,99 +233,89 @@ function spawnTerrain(type, count) {
 }
 
 function spawnEntity(type, count) {
-    let attempts = 0;
-    let spawned = 0;
+    let spawned = 0, attempts = 0;
     while(spawned < count && attempts < count * 10) {
         let x = rInt(cols), y = rInt(rows);
         if(grid.terrain[x][y] !== 'rock' && !grid.entities[x][y]) {
             let e = new Entity(x, y, type);
-            grid.entities[x][y] = e;
-            entities.push(e);
-            spawned++;
+            grid.entities[x][y] = e; entities.push(e); spawned++;
         }
         attempts++;
     }
 }
 
 function loop(timestamp) {
-    // Calculate FPS
     if (!lastTime) lastTime = timestamp;
-    const dt = timestamp - lastTime;
-    lastTime = timestamp;
-
-    frameCount++;
-    fpsTimer += dt;
-    if (fpsTimer >= 1000) {
-        document.getElementById('dispFps').innerText = frameCount;
-        frameCount = 0;
-        fpsTimer = 0;
-    }
-
-    // Simulation Loop
-    // We use setTimeout to clamp visual speed if desired, or just run full speed
-    // For smooth animation, we update based on requestAnimationFrame
+    const dt = timestamp - lastTime; lastTime = timestamp;
+    frameCount++; fpsTimer += dt;
+    if (fpsTimer >= 1000) { document.getElementById('dispFps').innerText = frameCount; frameCount = 0; fpsTimer = 0; }
     
     if(!isPaused) update();
     draw();
-    
     requestAnimationFrame(loop);
 }
 
 function update() {
-    // Food
     for(let i=0; i<CONF.foodSpawnRate; i++) {
         let x = rInt(cols), y = rInt(rows);
         if(!grid.terrain[x][y] && !grid.entities[x][y]) grid.terrain[x][y] = 'food';
     }
 
-    entities = entities.filter(e => !e.dead);
-    entities.sort(() => Math.random() - 0.5);
+    // Filter dead (faster than splice in loop)
+    if(entities.length > 0) {
+        let alive = [];
+        for(let e of entities) if(!e.dead) alive.push(e);
+        entities = alive;
+    }
     
-    let cPrey = 0, cPred = 0;
+    // OPTIMIZATION: Rebuild Spatial Grid (Sectors)
+    sectors = new Array(sCols * sRows).fill(null).map(()=>[]);
+    for(let e of entities) {
+        let sx = Math.floor(e.x / SECTOR_SIZE), sy = Math.floor(e.y / SECTOR_SIZE);
+        if(sx >= 0 && sx < sCols && sy >= 0 && sy < sRows) sectors[sy * sCols + sx].push(e);
+    }
 
-    entities.forEach(e => {
-        if(e.dead) return;
+    let cPrey = 0, cPred = 0;
+    
+    // Entities "Think"
+    for (let e of entities) {
+        if(e.dead) continue;
         if(e.type === 'prey') cPrey++; else cPred++;
 
         e.age++;
         e.energy -= (e.type === 'predator') ? CONF.predMetabolism : CONF.preyMetabolism;
         if(e.reproTimer > 0) e.reproTimer--;
 
-        if(e.energy <= 0 || e.age >= e.maxAge) return die(e);
+        if(e.energy <= 0 || e.age >= e.maxAge) { die(e); continue; }
 
         if(e.isSleeping) {
             e.stamina += 5; e.sleepTimer--;
             if(e.sleepTimer <= 0 && e.stamina >= 100) { e.isSleeping = false; e.stamina = 100; }
-            return;
+            continue;
         }
-        if(e.stamina <= 0) { e.isSleeping = true; return; }
+        if(e.stamina <= 0) { e.isSleeping = true; continue; }
 
         runAI(e);
-    });
+    }
 
-    // Update UI Stats
     document.getElementById('dispPrey').innerText = cPrey;
     document.getElementById('dispPred').innerText = cPred;
-    
-    // Update Graph
     updateGraph(cPrey, cPred);
 }
 
 function runAI(e) {
-    let view = scanGlobal(e, CONF.visionRange);
+    let nearest = getNearestNeighbor(e); 
     
     if(e.type === 'prey') {
-        if(view.preds.length > 0) {
+        if(nearest.pred) {
             e.state = 'flee';
-            let threat = view.preds[0];
-            move(e, getBestMove(e, threat.x, threat.y, true));
+            move(e, getBestMove(e, nearest.pred.x, nearest.pred.y, true));
             e.stamina -= 2;
         } else {
             e.state = 'idle';
             let nearbyFood = scanTerrain(e, 12, 'food');
-            if(nearbyFood.length > 0 && e.energy < e.maxEnergy * 0.9) {
-                let f = getClosest(e, nearbyFood);
-                move(e, getBestMove(e, f.x, f.y, false));
+            if(nearbyFood && e.energy < e.maxEnergy * 0.9) {
+                move(e, getBestMove(e, nearbyFood.x, nearbyFood.y, false));
             } else {
                 if(Math.random() < 0.25) move(e, getRandomMove(e));
                 else e.stamina = Math.min(100, e.stamina + 2);
@@ -527,9 +323,9 @@ function runAI(e) {
         }
         if(e.energy > e.maxEnergy * CONF.preyBirthThresh) reproduce(e);
     } else {
-        if(view.preys.length > 0) {
+        if(nearest.prey) {
             e.state = 'hunt';
-            let target = view.preys[0];
+            let target = nearest.prey;
             move(e, getBestMove(e, target.x, target.y, false));
             if(e.stamina > 15) {
                  move(e, getBestMove(e, target.x, target.y, false));
@@ -544,69 +340,116 @@ function runAI(e) {
     }
 }
 
-// --- HELPERS ---
+// --- LOGIC HELPERS ---
 
-function scanGlobal(e, range) {
-    let preds = [], preys = [];
-    for(let other of entities) {
-        if(other === e || other.dead) continue;
-        let d = dist(e.x, e.y, other.x, other.y);
-        if(d <= range) {
-            other._dist = d;
-            if(other.type === 'predator') preds.push(other);
-            else preys.push(other);
+// FIXED: Handles Wrap-Around logic correctly and ensures Vision Range isn't clipped
+function getNearestNeighbor(e) {
+    let closestPred = null, closestPrey = null;
+    let minDistPred = VISION_SQ, minDistPrey = VISION_SQ;
+
+    let sx = Math.floor(e.x / SECTOR_SIZE);
+    let sy = Math.floor(e.y / SECTOR_SIZE);
+
+    // Check 3x3 sectors with Wrap-Around (Torus topology)
+    for(let dy = -1; dy <= 1; dy++) {
+        for(let dx = -1; dx <= 1; dx++) {
+            // Fix 2: Wrap indices correctly
+            let nsx = (sx + dx + sCols) % sCols;
+            let nsy = (sy + dy + sRows) % sRows;
+            
+            let sector = sectors[nsy * sCols + nsx];
+            // Safety check if grid resized weirdly
+            if(!sector) continue; 
+
+            for(let other of sector) {
+                if(other === e || other.dead) continue;
+
+                let diffX = Math.abs(e.x - other.x);
+                let diffY = Math.abs(e.y - other.y);
+                // Fix 3: Distance calculation must respect grid wrapping
+                if(diffX > cols/2) diffX = cols - diffX;
+                if(diffY > rows/2) diffY = rows - diffY;
+                
+                let dSq = diffX*diffX + diffY*diffY;
+
+                if(dSq <= VISION_SQ) {
+                    if(other.type === 'predator') {
+                        if(dSq < minDistPred) { minDistPred = dSq; closestPred = other; }
+                    } else {
+                        if(dSq < minDistPrey) { minDistPrey = dSq; closestPrey = other; }
+                    }
+                }
+            }
         }
     }
-    preds.sort((a,b) => a._dist - b._dist);
-    preys.sort((a,b) => a._dist - b._dist);
-    return { preds, preys };
+    return { pred: closestPred, prey: closestPrey };
 }
 
 function scanTerrain(e, range, type) {
-    let found = [];
+    let best = null, minD = range * range + 1; 
     for(let dx = -range; dx <= range; dx++) {
         for(let dy = -range; dy <= range; dy++) {
             let nx = (e.x+dx+cols)%cols;
             let ny = (e.y+dy+rows)%rows;
-            if(grid.terrain[nx][ny] === type) found.push({x:nx, y:ny});
+            if(grid.terrain[nx][ny] === type) {
+                let dSq = dx*dx + dy*dy;
+                if(dSq < minD) { minD = dSq; best = {x:nx, y:ny}; }
+            }
         }
-    }
-    return found;
-}
-
-function getClosest(e, list) {
-    let minD = Infinity; let t = null;
-    for(let obj of list) {
-        let d = dist(e.x, e.y, obj.x, obj.y);
-        if(d < minD) { minD = d; t = obj; }
-    }
-    return t;
-}
-
-function getBestMove(e, tx, ty, flee) {
-    let best = null;
-    let score = flee ? -Infinity : Infinity;
-    let opts = [{x:0,y:-1},{x:1,y:-1},{x:1,y:0},{x:1,y:1},{x:0,y:1},{x:-1,y:1},{x:-1,y:0},{x:-1,y:-1}];
-    opts.sort(()=>Math.random()-0.5);
-
-    for(let m of opts) {
-        let nx=(e.x+m.x+cols)%cols; let ny=(e.y+m.y+rows)%rows;
-        if(grid.terrain[nx][ny] === 'rock') continue;
-        let occ = grid.entities[nx][ny];
-        if(occ && occ.type === e.type) continue;
-        
-        let d = dist(nx, ny, tx, ty);
-        if(flee) { if(d > score) { score = d; best = {x:nx, y:ny}; } }
-        else { if(d < score) { score = d; best = {x:nx, y:ny}; } }
     }
     return best;
 }
 
+const MOVES = [
+    {x:0,y:-1},{x:1,y:-1},{x:1,y:0},{x:1,y:1},
+    {x:0,y:1},{x:-1,y:1},{x:-1,y:0},{x:-1,y:-1}
+];
+
+function getBestMove(e, tx, ty, flee) {
+    let best = null;
+    let score = flee ? -1 : Infinity;
+
+    // Fix 4: Restore Fisher-Yates Shuffle for true randomness
+    // The previous optimization used a rotating index which biased movement
+    let idxs = [0,1,2,3,4,5,6,7];
+    for (let i = idxs.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [idxs[i], idxs[j]] = [idxs[j], idxs[i]];
+    }
+
+    for(let i of idxs) {
+        let m = MOVES[i];
+        let nx=(e.x+m.x+cols)%cols, ny=(e.y+m.y+rows)%rows;
+        
+        if(grid.terrain[nx][ny] === 'rock') continue;
+        let occ = grid.entities[nx][ny];
+        if(occ && occ.type === e.type) continue; 
+        
+        let dx = Math.abs(nx - tx), dy = Math.abs(ny - ty);
+        if(dx > cols/2) dx = cols-dx;
+        if(dy > rows/2) dy = rows-dy;
+        let dSq = dx*dx + dy*dy;
+
+        if(flee) { 
+            if(dSq > score) { score = dSq; best = {x:nx, y:ny}; } 
+        } else { 
+            if(dSq < score) { score = dSq; best = {x:nx, y:ny}; } 
+        }
+    }
+    return best;
+}
+
+const SIMPLE_MOVES = [{x:0,y:-1},{x:1,y:0},{x:0,y:1},{x:-1,y:0}];
 function getRandomMove(e) {
-    let opts = [{x:0,y:-1},{x:1,y:0},{x:0,y:1},{x:-1,y:0}];
-    opts.sort(()=>Math.random()-0.5);
-    for(let m of opts) {
-        let nx=(e.x+m.x+cols)%cols; let ny=(e.y+m.y+rows)%rows;
+    // Restore randomness here too
+    let idxs = [0,1,2,3];
+    for (let i = idxs.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [idxs[i], idxs[j]] = [idxs[j], idxs[i]];
+    }
+    for(let i of idxs) {
+        let m = SIMPLE_MOVES[i];
+        let nx=(e.x+m.x+cols)%cols, ny=(e.y+m.y+rows)%rows;
         if(grid.terrain[nx][ny]!=='rock' && !grid.entities[nx][ny]) return {x:nx,y:ny};
     }
     return null;
@@ -640,22 +483,25 @@ function updatePos(e, nx, ny) {
 }
 
 function reproduce(e) {
-    let spots = [];
-    for(let dx=-1; dx<=1; dx++) {
-        for(let dy=-1; dy<=1; dy++) {
-            let nx=(e.x+dx+cols)%cols; let ny=(e.y+dy+rows)%rows;
-            if(!grid.entities[nx][ny] && grid.terrain[nx][ny]!=='rock') spots.push({x:nx,y:ny});
-        }
+    // Restore randomness for birth spots
+    let idxs = [0,1,2,3,4,5,6,7];
+    for (let i = idxs.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [idxs[i], idxs[j]] = [idxs[j], idxs[i]];
     }
-    if(spots.length > 0) {
-        let cost = (e.type === 'predator') ? CONF.predBirthCost : CONF.preyBirthCost;
-        if(e.energy > cost) {
-            let s = spots[rInt(spots.length)];
-            let baby = new Entity(s.x, s.y, e.type);
-            e.energy -= cost;
-            if(e.type === 'predator') e.reproTimer = CONF.predReproCooldown;
-            grid.entities[s.x][s.y] = baby;
-            entities.push(baby);
+    for(let i of idxs) {
+        let m = MOVES[i];
+        let nx=(e.x+m.x+cols)%cols, ny=(e.y+m.y+rows)%rows;
+        if(!grid.entities[nx][ny] && grid.terrain[nx][ny]!=='rock') {
+             let cost = (e.type === 'predator') ? CONF.predBirthCost : CONF.preyBirthCost;
+             if(e.energy > cost) {
+                let baby = new Entity(nx, ny, e.type);
+                e.energy -= cost;
+                if(e.type === 'predator') e.reproTimer = CONF.predReproCooldown;
+                grid.entities[nx][ny] = baby;
+                entities.push(baby);
+             }
+             return;
         }
     }
 }
@@ -665,41 +511,36 @@ function die(e) {
     if(grid.entities[e.x][e.y] === e) grid.entities[e.x][e.y] = null;
 }
 
-function dist(x1,y1,x2,y2) {
-    let dx = Math.abs(x1-x2); let dy = Math.abs(y1-y2);
-    if(dx > cols/2) dx = cols-dx;
-    if(dy > rows/2) dy = rows-dy;
-    return Math.sqrt(dx*dx + dy*dy);
-}
 function rInt(n) { return Math.floor(Math.random()*n); }
 
-function draw() {
-    ctx.fillStyle = COLORS.bg;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
+function drawStaticBackground() {
+    bgCtx.fillStyle = COLORS.bg;
+    bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
+    bgCtx.fillStyle = COLORS.rock;
     for(let x=0; x<cols; x++) {
         for(let y=0; y<rows; y++) {
-            let t = grid.terrain[x][y];
-            if(t) {
-                let px=x*GRID_SIZE, py=y*GRID_SIZE;
-                if(t==='rock') { ctx.fillStyle=COLORS.rock; ctx.fillRect(px,py,GRID_SIZE,GRID_SIZE); }
-                if(t==='food') { ctx.fillStyle=COLORS.food; ctx.fillRect(px,py,GRID_SIZE,GRID_SIZE); }
-            }
+            if(grid.terrain[x][y] === 'rock') bgCtx.fillRect(x*GRID_SIZE, y*GRID_SIZE, GRID_SIZE, GRID_SIZE); 
+        }
+    }
+}
+
+function draw() {
+    ctx.drawImage(bgCanvas, 0, 0);
+    ctx.fillStyle = COLORS.food;
+    for(let x=0; x<cols; x++) {
+        for(let y=0; y<rows; y++) {
+            if(grid.terrain[x][y] === 'food') ctx.fillRect(x*GRID_SIZE, y*GRID_SIZE, GRID_SIZE, GRID_SIZE);
         }
     }
     for(let e of entities) {
         if(e.dead) continue;
         let px=e.x*GRID_SIZE, py=e.y*GRID_SIZE;
-        if(e.type==='prey') {
-            ctx.fillStyle = (e.state==='flee') ? COLORS.preyPanic : COLORS.prey;
-            ctx.fillRect(px, py, GRID_SIZE, GRID_SIZE); 
-        } else {
-            ctx.fillStyle = (e.state==='hunt') ? COLORS.predHunt : COLORS.predStalk;
-            ctx.fillRect(px, py, GRID_SIZE, GRID_SIZE);
-        }
+        if(e.type==='prey') ctx.fillStyle = (e.state==='flee') ? COLORS.preyPanic : COLORS.prey;
+        else ctx.fillStyle = (e.state==='hunt') ? COLORS.predHunt : COLORS.predStalk;
+        
+        ctx.fillRect(px, py, GRID_SIZE, GRID_SIZE); 
         if(e.isSleeping) {
-            ctx.fillStyle = COLORS.sleep;
-            ctx.fillRect(px+1, py+1, GRID_SIZE-2, GRID_SIZE-2);
+            ctx.fillStyle = COLORS.sleep; ctx.fillRect(px+1, py+1, GRID_SIZE-2, GRID_SIZE-2);
         }
     }
 }
