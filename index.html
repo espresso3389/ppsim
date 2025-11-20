@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EcoSim V19 - Full Config & Map Size</title>
+    <title>EcoSim V20 - Interactive Map Editor</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #050505; font-family: 'Segoe UI', Roboto, monospace; color: #ccc; }
-        canvas { display: block; cursor: grab; }
-        canvas:active { cursor: grabbing; }
+        canvas { display: block; cursor: crosshair; }
         
         /* HUD */
         #hud { position: absolute; top: 15px; left: 15px; background: rgba(10, 10, 10, 0.8); border: 1px solid #333; border-radius: 6px; padding: 10px 15px; pointer-events: none; user-select: none; display: flex; flex-direction: column; gap: 5px; font-family: 'Courier New', monospace; font-weight: bold; z-index: 50; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
@@ -21,6 +20,21 @@
         /* GRAPH */
         #graph-container { position: absolute; bottom: 15px; left: 15px; width: 300px; height: 100px; background: rgba(10, 10, 10, 0.8); border: 1px solid #333; border-radius: 6px; z-index: 40; pointer-events: none; }
         #graphCanvas { width: 100%; height: 100%; display: block; border-radius: 6px; }
+
+        /* TOOLBAR */
+        #toolbar {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: rgba(20, 20, 20, 0.95); border: 1px solid #444; border-radius: 8px;
+            display: flex; gap: 5px; padding: 5px; z-index: 60;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+        }
+        .tool-btn {
+            width: 40px; height: 40px; border: 1px solid transparent; background: #333;
+            border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem; color: #fff; transition: all 0.2s;
+        }
+        .tool-btn:hover { background: #444; }
+        .tool-btn.active { background: #0055aa; border-color: #0077cc; box-shadow: 0 0 8px #0055aa; }
 
         /* CONTROLS */
         #controls-btn { position: absolute; top: 15px; right: 15px; padding: 8px 16px; background: #333; border: 1px solid #555; color: #fff; cursor: pointer; border-radius: 4px; z-index: 60; font-size: 0.8rem; text-transform: uppercase; }
@@ -44,10 +58,6 @@
         button.action-btn { flex: 1; padding: 10px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.8rem; text-transform: uppercase; color: #fff; }
         .btn-blue { background: #0055aa; } .btn-blue:hover { background: #0066cc; }
         .btn-gray { background: #333; } .btn-gray:hover { background: #444; }
-        
-        #zoom-hint {
-            position: absolute; bottom: 15px; right: 20px; color: #555; font-size: 0.8rem; pointer-events: none;
-        }
     </style>
 </head>
 <body>
@@ -59,8 +69,15 @@
     </div>
 
     <div id="graph-container"><canvas id="graphCanvas" width="300" height="100"></canvas></div>
-    
-    <div id="zoom-hint">Scroll to Zoom • Drag to Pan</div>
+
+    <div id="toolbar">
+        <div class="tool-btn active" id="tool-pan" onclick="setTool('pan')" title="Pan/Move Camera">✋</div>
+        <div class="tool-btn" id="tool-prey" onclick="setTool('prey')" title="Add Prey" style="color:#00ccff">●</div>
+        <div class="tool-btn" id="tool-pred" onclick="setTool('predator')" title="Add Predator" style="color:#ff2222">●</div>
+        <div class="tool-btn" id="tool-rock" onclick="setTool('rock')" title="Add Rock">⬛</div>
+        <div class="tool-btn" id="tool-food" onclick="setTool('food')" title="Add Food" style="color:#00aa00">♣</div>
+        <div class="tool-btn" id="tool-erase" onclick="setTool('erase')" title="Eraser">✖</div>
+    </div>
 
     <button id="controls-btn" onclick="togglePanel()">Settings</button>
 
@@ -170,6 +187,7 @@ let SECTOR_SIZE;
 let camera = { x: 0, y: 0, zoom: 1 };
 let isDragging = false;
 let lastMouse = { x: 0, y: 0 };
+let currentTool = 'pan'; // pan, prey, predator, rock, food, erase
 
 let spriteCache = {}; 
 
@@ -278,7 +296,6 @@ function setupUI() {
             CONF[key] = newVal;
             if(key === 'visionRange') {
                 VISION_SQ = CONF.visionRange * CONF.visionRange;
-                // Logic handles update on next loop or restart
             }
         };
     };
@@ -289,18 +306,97 @@ function setupUI() {
     bind('foodSpawnRate');
 }
 
+function setTool(t) {
+    currentTool = t;
+    canvas.style.cursor = (t === 'pan') ? 'grab' : 'crosshair';
+    document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+    let btnId = 'tool-' + (t === 'predator' ? 'pred' : t);
+    document.getElementById(btnId).classList.add('active');
+}
+
 function setupInput() {
-    canvas.addEventListener('mousedown', e => { isDragging = true; lastMouse = {x: e.clientX, y: e.clientY}; });
-    window.addEventListener('mouseup', () => isDragging = false);
+    const getGridPos = (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        // Convert screen to world
+        const wx = (mx - camera.x) / camera.zoom;
+        const wy = (my - camera.y) / camera.zoom;
+        // Convert world to grid
+        const gx = Math.floor(wx / BASE_TILE_SIZE);
+        const gy = Math.floor(wy / BASE_TILE_SIZE);
+        return { x: gx, y: gy };
+    }
+
+    const applyTool = (e) => {
+        const p = getGridPos(e);
+        if(p.x < 0 || p.x >= cols || p.y < 0 || p.y >= rows) return;
+
+        if(currentTool === 'pan') return;
+
+        // Clear existing if painting logic requires
+        if(currentTool === 'erase') {
+            if(grid.entities[p.x][p.y]) {
+                grid.entities[p.x][p.y].dead = true;
+                grid.entities[p.x][p.y] = null;
+            }
+            grid.terrain[p.x][p.y] = null;
+            return;
+        }
+
+        // Cannot place entity on rock
+        if (grid.terrain[p.x][p.y] === 'rock' && (currentTool === 'prey' || currentTool === 'predator' || currentTool === 'food')) {
+            return; 
+        }
+
+        // Painting Rock or Food
+        if(currentTool === 'rock' || currentTool === 'food') {
+             if(grid.entities[p.x][p.y]) {
+                 grid.entities[p.x][p.y].dead = true; // Kill entity if placing block on top
+                 grid.entities[p.x][p.y] = null;
+             }
+             grid.terrain[p.x][p.y] = currentTool;
+             return;
+        }
+
+        // Painting Entities
+        if(currentTool === 'prey' || currentTool === 'predator') {
+            // If cell is empty or occupied by different type, overwrite
+            if(!grid.entities[p.x][p.y]) {
+                let ent = new Entity(p.x, p.y, currentTool);
+                entities.push(ent);
+                grid.entities[p.x][p.y] = ent;
+            }
+        }
+    }
+
+    canvas.addEventListener('mousedown', e => { 
+        isDragging = true; 
+        lastMouse = {x: e.clientX, y: e.clientY}; 
+        applyTool(e);
+    });
+
+    window.addEventListener('mouseup', () => { 
+        isDragging = false; 
+        if(currentTool === 'pan') canvas.style.cursor = 'grab';
+    });
+
     window.addEventListener('mousemove', e => {
         if(isDragging) {
-            let dx = e.clientX - lastMouse.x;
-            let dy = e.clientY - lastMouse.y;
-            camera.x += dx; 
-            camera.y += dy;
-            lastMouse = {x: e.clientX, y: e.clientY};
+            if(currentTool === 'pan') {
+                canvas.style.cursor = 'grabbing';
+                let dx = e.clientX - lastMouse.x;
+                let dy = e.clientY - lastMouse.y;
+                camera.x += dx; 
+                camera.y += dy;
+                lastMouse = {x: e.clientX, y: e.clientY};
+            } else {
+                applyTool(e);
+                // Rate limit painting slightly can be done here if needed, but canvas is fast enough
+            }
         }
     });
+
     canvas.addEventListener('wheel', e => {
         e.preventDefault();
         let zoomFactor = 1.1;
@@ -681,6 +777,12 @@ function draw() {
     
     ctx.strokeStyle = '#444'; ctx.lineWidth = 2;
     ctx.strokeRect(0,0, cols*BASE_TILE_SIZE, rows*BASE_TILE_SIZE);
+
+    // Draw highlight for tool cursor
+    if(currentTool !== 'pan') {
+       // This is a bit complex because mouse is in screen coords, need to reverse project
+       // We can use lastMouse but it only updates on move
+    }
 
     ctx.restore();
 }
