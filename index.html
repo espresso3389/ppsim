@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>EcoSim WebGL</title>
+    <title>EcoSim HD</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #050505; font-family: 'Segoe UI', Roboto, monospace; color: #ccc; touch-action: none; }
-        canvas { display: block; touch-action: none; }
+        /* Canvas scales based on CSS, but renders based on internal resolution */
+        canvas { display: block; touch-action: none; width: 100%; height: 100%; }
         
         /* HUD */
-        #hud { position: absolute; top: 15px; left: 15px; background: rgba(10, 10, 10, 0.8); border: 1px solid #333; border-radius: 6px; padding: 10px 15px; pointer-events: none; user-select: none; display: flex; flex-direction: column; gap: 5px; font-family: 'Courier New', monospace; font-weight: bold; z-index: 50; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+        #hud { position: absolute; top: 15px; left: 15px; background: rgba(10, 10, 10, 0.85); border: 1px solid #333; border-radius: 6px; padding: 10px 15px; pointer-events: none; user-select: none; display: flex; flex-direction: column; gap: 5px; font-family: 'Courier New', monospace; font-weight: bold; z-index: 50; box-shadow: 0 4px 12px rgba(0,0,0,0.5); backdrop-filter: blur(4px); }
         .hud-row { display: flex; justify-content: space-between; min-width: 180px; }
         .hud-label { display: flex; align-items: center; gap: 8px; }
         .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
@@ -18,64 +19,53 @@
         .hud-fps { font-size: 0.8rem; color: #666; margin-top: 5px; border-top: 1px solid #333; padding-top: 5px;}
 
         /* GRAPH */
-        #graph-container { position: absolute; bottom: 80px; left: 15px; width: 200px; height: 60px; background: rgba(10, 10, 10, 0.8); border: 1px solid #333; border-radius: 6px; z-index: 40; pointer-events: none; opacity: 0.8; }
+        #graph-container { position: absolute; bottom: 80px; left: 15px; width: 200px; height: 60px; background: rgba(10, 10, 10, 0.8); border: 1px solid #333; border-radius: 6px; z-index: 40; pointer-events: none; opacity: 0.9; }
         #graphCanvas { width: 100%; height: 100%; display: block; border-radius: 6px; }
 
         /* TOOLBAR */
         #toolbar {
             position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
-            background: rgba(20, 20, 20, 0.95); border: 1px solid #444; border-radius: 8px;
-            display: flex; gap: 5px; padding: 5px; z-index: 60;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+            background: rgba(25, 25, 25, 0.95); border: 1px solid #444; border-radius: 8px;
+            display: flex; gap: 5px; padding: 6px; z-index: 60;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.6);
             white-space: nowrap;
-            justify-content: center; /* Center on desktop */
+            backdrop-filter: blur(5px);
         }
         .tool-btn {
-            width: 40px; height: 40px; border: 1px solid transparent; background: #333;
-            border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center;
-            font-size: 1.2rem; color: #fff; transition: all 0.2s; flex-shrink: 0;
+            width: 44px; height: 44px; border: 1px solid #444; background: #333;
+            border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            font-size: 1.3rem; color: #fff; transition: all 0.1s ease-out; flex-shrink: 0;
         }
-        .tool-btn:hover { background: #444; }
-        .tool-btn.active { background: #0055aa; border-color: #0077cc; box-shadow: 0 0 8px #0055aa; }
+        .tool-btn:active { transform: scale(0.95); }
+        .tool-btn.active { background: #0066cc; border-color: #4499ff; box-shadow: 0 0 10px #0055aa; transform: scale(1.05); z-index: 1; }
 
         /* CONTROLS */
-        #controls-btn { position: absolute; top: 15px; right: 15px; padding: 8px 16px; background: #333; border: 1px solid #555; color: #fff; cursor: pointer; border-radius: 4px; z-index: 60; font-size: 0.8rem; text-transform: uppercase; }
-        #controls-btn:hover { background: #444; }
-
-        #panel { position: absolute; top: 0; right: 0; width: 300px; height: 100vh; background: rgba(12, 12, 12, 0.98); border-left: 1px solid #333; display: flex; flex-direction: column; box-shadow: -5px 0 20px rgba(0,0,0,0.8); transition: transform 0.3s ease; transform: translateX(100%); overflow-y: auto; z-index: 70; }
+        #controls-btn { position: absolute; top: 15px; right: 15px; padding: 8px 16px; background: #333; border: 1px solid #555; color: #fff; cursor: pointer; border-radius: 4px; z-index: 60; font-size: 0.8rem; text-transform: uppercase; font-weight: 600; }
+        #panel { position: absolute; top: 0; right: 0; width: 320px; height: 100vh; background: rgba(15, 15, 15, 0.98); border-left: 1px solid #333; display: flex; flex-direction: column; box-shadow: -5px 0 25px rgba(0,0,0,0.9); transition: transform 0.3s cubic-bezier(0.2, 1, 0.3, 1); transform: translateX(100%); overflow-y: auto; z-index: 70; }
         #panel.open { transform: translateX(0); }
-        .header { padding: 15px; background: #181818; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center;}
-        .header h2 { margin: 0; font-size: 0.9rem; color: #eee; text-transform: uppercase; }
-        .close-btn { background: none; border: none; color: #666; font-size: 1.5rem; cursor: pointer;}
-        .content { padding: 15px; padding-bottom: 50px; }
-        .section { margin-bottom: 20px; border-bottom: 1px solid #222; padding-bottom: 10px; }
-        .section-title { font-size: 0.7rem; color: #666; text-transform: uppercase; margin-bottom: 10px; font-weight: bold; }
-        .control-group { margin-bottom: 10px; }
-        .control-label { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 3px; color: #bbb; }
+        .header { padding: 18px; background: #202020; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center;}
+        .header h2 { margin: 0; font-size: 1rem; color: #fff; letter-spacing: 1px; text-transform: uppercase; }
+        .close-btn { background: none; border: none; color: #888; font-size: 1.8rem; cursor: pointer; line-height: 1; }
+        .content { padding: 20px; padding-bottom: 60px; }
+        .section { margin-bottom: 25px; border-bottom: 1px solid #2a2a2a; padding-bottom: 15px; }
+        .section-title { font-size: 0.75rem; color: #888; text-transform: uppercase; margin-bottom: 12px; font-weight: bold; letter-spacing: 0.5px; }
+        .control-group { margin-bottom: 12px; }
+        .control-label { display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 5px; color: #ccc; }
         .val-display { color: #00ccff; font-family: monospace; }
         
-        input[type=range] { width: 100%; height: 4px; background: #333; border-radius: 2px; appearance: none; cursor: pointer; }
-        input[type=range]::-webkit-slider-thumb { appearance: none; width: 14px; height: 14px; background: #00ccff; border-radius: 50%; cursor: pointer; border: 1px solid #000; }
+        input[type=range] { width: 100%; height: 5px; background: #444; border-radius: 3px; appearance: none; cursor: pointer; outline: none; }
+        input[type=range]::-webkit-slider-thumb { appearance: none; width: 16px; height: 16px; background: #00ccff; border-radius: 50%; cursor: pointer; border: 2px solid #111; box-shadow: 0 0 5px rgba(0,0,0,0.5); }
         
         .btn-row { display: flex; gap: 10px; margin-top: 20px; }
-        button.action-btn { flex: 1; padding: 10px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.8rem; text-transform: uppercase; color: #fff; }
-        .btn-blue { background: #0055aa; } .btn-blue:hover { background: #0066cc; }
-        .btn-gray { background: #333; } .btn-gray:hover { background: #444; }
+        button.action-btn { flex: 1; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; text-transform: uppercase; color: #fff; transition: background 0.2s; }
+        .btn-blue { background: #0066cc; } .btn-blue:hover { background: #0077dd; }
+        .btn-gray { background: #444; } .btn-gray:hover { background: #555; }
 
-        /* MOBILE OPTIMIZATIONS */
         @media (max-width: 768px) {
-            #toolbar {
-                width: 95%;
-                bottom: 15px;
-                overflow-x: auto;
-                justify-content: flex-start; /* Align start for scroll */
-                -webkit-overflow-scrolling: touch;
-            }
-            .tool-btn {
-                width: 50px; height: 50px; font-size: 1.4rem;
-            }
+            #toolbar { width: 95%; bottom: 15px; overflow-x: auto; justify-content: flex-start; -webkit-overflow-scrolling: touch; padding-bottom: 10px; }
+            .tool-btn { width: 52px; height: 52px; font-size: 1.5rem; }
             #panel { width: 100%; }
-            #hud { font-size: 0.8rem; padding: 8px; }
+            #hud { font-size: 0.8rem; padding: 8px; top: 10px; left: 10px; }
             #graph-container { display: none; }
         }
     </style>
@@ -137,19 +127,20 @@
     <canvas id="simCanvas"></canvas>
 
 <script>
-// --- WEBGL SHADERS ---
+// --- WEBGL SHADERS (Pass 1: Sprites) ---
 const VS_SOURCE = `#version 300 es
-layout(location=0) in vec2 a_pos;      // Quad vertex (0,0 to 1,1)
+layout(location=0) in vec2 a_pos;      
 layout(location=1) in vec4 a_instance; // x, y, size, typeIndex
-uniform mat3 u_matrix;                 // Projection * View
-uniform vec2 u_atlasSize;              // Size of texture atlas (e.g. 512, 64)
+uniform mat3 u_matrix;                 
+uniform vec2 u_atlasSize;              
 out vec2 v_texCoord;
 void main() {
+    // Expand vertex to world pos
     vec2 worldPos = a_instance.xy + (a_pos * a_instance.z);
     vec3 finalPos = u_matrix * vec3(worldPos, 1.0);
     gl_Position = vec4(finalPos.xy, 0.0, 1.0);
     
-    // Sprite calculation: We assume 64x64 sprites stacked horizontally
+    // Map texture coordinates from Atlas
     float spriteIdx = a_instance.w;
     float spriteSize = 64.0;
     float u = (spriteIdx * spriteSize + a_pos.x * spriteSize) / u_atlasSize.x;
@@ -164,11 +155,10 @@ uniform sampler2D u_texture;
 out vec4 outColor;
 void main() {
     vec4 color = texture(u_texture, v_texCoord);
-    if (color.a < 0.1) discard;
+    // Smooth alpha blending instead of discard for nicer edges
     outColor = color;
 }`;
 
-// --- CONFIG ---
 const DEFAULT_CONF = {
     mapSize: 300, simSpeed: 30,
     densityPrey: 0.001, densityPred: 0.0001, 
@@ -191,15 +181,16 @@ let lastTouchDist = 0, isPinching = false, lastPinchCenter = {x:0, y:0};
 let lastTime = 0, frameCount = 0, fpsTimer = 0, lastFrameTime = 0; 
 let popHistory = [], MAX_HISTORY = 300; 
 let canvas, gl, graphCanvas, graphCtx;
-let glState = {}; // Holds WebGL programs, buffers, etc.
+let glState = {};
+let dpr = 1;
 
-// Sprite mappings for Atlas
+// Sprite IDs
 const SID = { ROCK:0, FOOD:1, PREY:2, PREY_ACT:3, PREY_SLP:4, PRED:5, PRED_ACT:6, PRED_SLP:7 };
 
 window.onload = () => {
     canvas = document.getElementById('simCanvas');
-    // Init WebGL
-    gl = canvas.getContext('webgl2', { alpha: false, antialias: false });
+    // Request AA and Alpha for smooth edges
+    gl = canvas.getContext('webgl2', { alpha: true, antialias: true, premultipliedAlpha: false });
     if(!gl) { alert("WebGL2 not supported"); return; }
     
     graphCanvas = document.getElementById('graphCanvas');
@@ -215,14 +206,19 @@ window.onload = () => {
 };
 
 function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    // High DPI support
+    dpr = window.devicePixelRatio || 1;
+    canvas.width = window.innerWidth * dpr;
+    canvas.height = window.innerHeight * dpr;
     gl.viewport(0, 0, canvas.width, canvas.height);
 }
 
 // --- WEBGL SETUP ---
 function setupWebGL() {
-    // 1. Create Shader Program
+    // Enable Blending for smooth edges (Antialiasing inside textures)
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
     const createShader = (type, src) => {
         const s = gl.createShader(type);
         gl.shaderSource(s, src); gl.compileShader(s);
@@ -233,11 +229,10 @@ function setupWebGL() {
     gl.attachShader(program, createShader(gl.VERTEX_SHADER, VS_SOURCE));
     gl.attachShader(program, createShader(gl.FRAGMENT_SHADER, FS_SOURCE));
     gl.linkProgram(program);
-    if(!gl.getProgramParameter(program, gl.LINK_STATUS)) console.error(gl.getProgramInfoLog(program));
     gl.useProgram(program);
     glState.program = program;
 
-    // 2. Generate Texture Atlas
+    // Generate Texture Atlas
     const atlasCanvas = document.createElement('canvas');
     const spriteSize = 64;
     const count = 8; 
@@ -247,81 +242,90 @@ function setupWebGL() {
     
     const drawFace = (dx, color, type, state) => {
         let cx = dx + 32, cy = 32;
-        // Rock/Food simple shapes
+        // Clear background for alpha
+        ctx.clearRect(dx, 0, 64, 64);
+        
         if(type === 'rock') { 
             ctx.fillStyle = '#222'; ctx.fillRect(dx,0,64,64); 
-            ctx.fillStyle = '#333'; ctx.fillRect(dx+4,4,56,56); return; 
+            ctx.fillStyle = '#333'; ctx.fillRect(dx+2,2,60,60); return; 
         }
         if(type === 'food') {
-            ctx.fillStyle = '#004400'; ctx.beginPath(); ctx.arc(cx,cy,24,0,Math.PI*2); ctx.fill(); return;
+            // Glow
+            ctx.shadowBlur = 10; ctx.shadowColor = '#00ff00';
+            ctx.fillStyle = '#00aa00'; ctx.beginPath(); ctx.arc(cx,cy,24,0,Math.PI*2); ctx.fill(); 
+            ctx.shadowBlur = 0; return;
         }
-        // Entities
+        
+        // Smooth Entities
+        ctx.shadowBlur = 5; ctx.shadowColor = color;
         ctx.beginPath(); ctx.fillStyle = color; ctx.arc(cx, cy, 28, 0, Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.arc(cx-10, cy-10, 10, 0, Math.PI*2); ctx.fill();
+        ctx.shadowBlur = 0;
+        
+        // Reflection
+        ctx.beginPath(); ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.arc(cx-10, cy-10, 10, 0, Math.PI*2); ctx.fill();
+        
         if(state === 'sleep') {
-            ctx.strokeStyle='#333'; ctx.lineWidth=3; 
+            ctx.strokeStyle='#333'; ctx.lineWidth=3; ctx.lineCap='round';
             ctx.beginPath(); ctx.moveTo(cx-15,cy); ctx.lineTo(cx-5,cy); ctx.stroke();
             ctx.beginPath(); ctx.moveTo(cx+5,cy); ctx.lineTo(cx+15,cy); ctx.stroke();
-            ctx.fillStyle='#fff'; ctx.font='bold 14px monospace'; ctx.fillText('z', cx+10, cy-15);
+            ctx.fillStyle='#fff'; ctx.font='bold 16px monospace'; ctx.fillText('z', cx+10, cy-15);
         } else {
             ctx.fillStyle='#fff'; 
-            let es = (state === 'action' && type === 'prey') ? 10 : 8;
+            let es = (state === 'action' && type === 'prey') ? 11 : 9;
             ctx.beginPath(); ctx.arc(cx-10, cy-5, es, 0, Math.PI*2); ctx.fill();
             ctx.beginPath(); ctx.arc(cx+10, cy-5, es, 0, Math.PI*2); ctx.fill();
             ctx.fillStyle='#000'; 
-            ctx.beginPath(); ctx.arc(cx-10, cy-5, 3, 0, Math.PI*2); ctx.fill();
-            ctx.beginPath(); ctx.arc(cx+10, cy-5, 3, 0, Math.PI*2); ctx.fill();
-            if(type === 'predator') {
-                ctx.strokeStyle='#000'; ctx.lineWidth=3;
-                ctx.beginPath(); ctx.moveTo(cx-18,cy-12); ctx.lineTo(cx-4,cy-8); ctx.stroke();
+            ctx.beginPath(); ctx.arc(cx-10, cy-5, 4, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(cx+10, cy-5, 4, 0, Math.PI*2); ctx.fill();
+            
+            ctx.beginPath(); ctx.strokeStyle='#000'; ctx.lineWidth=2.5; ctx.lineCap='round';
+            if(type==='predator') {
+                ctx.moveTo(cx-18,cy-12); ctx.lineTo(cx-4,cy-8); ctx.stroke();
                 ctx.beginPath(); ctx.moveTo(cx+4,cy-8); ctx.lineTo(cx+18,cy-12); ctx.stroke();
             }
-            ctx.beginPath(); ctx.strokeStyle='#000'; ctx.lineWidth=2;
-            if(state==='action' && type==='prey') { ctx.arc(cx,cy+10,6,0,Math.PI*2); ctx.stroke(); }
-            else if(type==='predator') { ctx.moveTo(cx-8,cy+12); ctx.lineTo(cx+8,cy+12); ctx.stroke(); }
-            else { ctx.arc(cx,cy+10,8,0,Math.PI,false); ctx.stroke(); }
+            ctx.beginPath();
+            if(state==='action' && type==='prey') { ctx.arc(cx,cy+12,6,0,Math.PI*2); ctx.stroke(); }
+            else if(type==='predator') { ctx.moveTo(cx-10,cy+14); ctx.lineTo(cx+10,cy+14); ctx.stroke(); }
+            else { ctx.arc(cx,cy+12,8,0,Math.PI,false); ctx.stroke(); }
         }
     };
-    // Draw sprites to atlas
     drawFace(0, null, 'rock');
     drawFace(64, null, 'food');
     drawFace(128, '#00ccff', 'prey', 'idle');
-    drawFace(192, '#aaf', 'prey', 'action');
+    drawFace(192, '#aaaaff', 'prey', 'action');
     drawFace(256, '#00ccff', 'prey', 'sleep');
     drawFace(320, '#ff2222', 'predator', 'idle');
-    drawFace(384, '#ff0000', 'predator', 'action');
+    drawFace(384, '#ff5555', 'predator', 'action');
     drawFace(448, '#ff2222', 'predator', 'sleep');
 
-    // Upload Texture
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, atlasCanvas);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    
+    // TRILINEAR FILTERING for smooth zoom
+    gl.generateMipmap(gl.TEXTURE_2D);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     
     gl.uniform1i(gl.getUniformLocation(program, 'u_texture'), 0);
     gl.uniform2f(gl.getUniformLocation(program, 'u_atlasSize'), atlasCanvas.width, atlasCanvas.height);
 
-    // 3. Geometry (Instanced Quad)
     const vao = gl.createVertexArray();
     gl.bindVertexArray(vao);
 
-    // Positions (0,0 to 1,1)
     const posBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0,0, 1,0, 0,1, 1,0, 1,1, 0,1]), gl.STATIC_DRAW);
     gl.enableVertexAttribArray(0);
     gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
 
-    // Instances (Dynamic)
     const instanceBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, instanceBuffer);
-    // Allocate a big buffer (e.g. 100k instances * 4 floats * 4 bytes) ~ 1.6MB
+    // Large buffer for 100k entities
     gl.bufferData(gl.ARRAY_BUFFER, 100000 * 16, gl.DYNAMIC_DRAW); 
-    
     gl.enableVertexAttribArray(1);
-    gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 16, 0); // x, y, size, type
-    gl.vertexAttribDivisor(1, 1); // Advance once per instance
+    gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 16, 0); 
+    gl.vertexAttribDivisor(1, 1); 
 
     glState.vao = vao;
     glState.instanceBuffer = instanceBuffer;
@@ -332,7 +336,8 @@ function setupWebGL() {
 // --- INPUT & UI ---
 function setupInput() {
     const getGridPos = (cx, cy) => {
-        const rect = canvas.getBoundingClientRect();
+        const rect = canvas.getBoundingClientRect(); // Physical coords
+        // Adjust for zoom and pan
         const mx = cx - rect.left, my = cy - rect.top;
         const wx = (mx - camera.x) / camera.zoom, wy = (my - camera.y) / camera.zoom;
         return { x: Math.floor(wx / BASE_TILE_SIZE), y: Math.floor(wy / BASE_TILE_SIZE) };
@@ -425,12 +430,15 @@ function restartSim() {
     cols = CONF.mapSize; rows = CONF.mapSize;
     let worldW = cols * BASE_TILE_SIZE;
     let worldH = rows * BASE_TILE_SIZE;
+    // Use logical pixels for calculations
+    let logicW = canvas.width / dpr;
     if(window.innerWidth < 768) {
-        let targetZoom = (canvas.width * 0.95) / worldW;
+        let targetZoom = (logicW * 0.95) / worldW;
         camera.zoom = Math.max(0.2, Math.min(targetZoom, 3.0));
     } else camera.zoom = 1.0;
-    camera.x = (canvas.width - worldW * camera.zoom) / 2;
-    camera.y = (canvas.height - worldH * camera.zoom) / 2;
+    camera.x = (logicW - worldW * camera.zoom) / 2;
+    camera.y = (canvas.height/dpr - worldH * camera.zoom) / 2;
+    
     SECTOR_SIZE = Math.ceil(CONF.visionRange); 
     sCols = Math.ceil(cols / SECTOR_SIZE); sRows = Math.ceil(rows / SECTOR_SIZE);
     grid = { terrain: new Array(cols).fill(0).map(()=>new Array(rows).fill(null)), entities: new Array(cols).fill(0).map(()=>new Array(rows).fill(null)) };
@@ -572,12 +580,15 @@ function reproduce(e) {
 
 function updateGraph(prey, pred) {
     popHistory.push({ p: prey, r: pred }); if(popHistory.length > MAX_HISTORY) popHistory.shift();
-    const w = graphCanvas.width, h = graphCanvas.height; graphCtx.clearRect(0, 0, w, h);
+    // Increase internal res of graph for HD look
+    const w = 200 * dpr, h = 60 * dpr;
+    if(graphCanvas.width !== w) { graphCanvas.width=w; graphCanvas.height=h; }
+    graphCtx.clearRect(0, 0, w, h);
     let maxVal = 10; for(let d of popHistory) maxVal = Math.max(maxVal, d.p, d.r);
-    const getY = (val) => h - ((val / maxVal) * (h - 10)) - 5, getX = (i) => (i / (MAX_HISTORY-1)) * w;
+    const getY = (val) => h - ((val / maxVal) * (h - 20)) - 10, getX = (i) => (i / (MAX_HISTORY-1)) * w;
     if(popHistory.length < 2) return;
     const drawLine = (prop, color) => {
-        graphCtx.beginPath(); graphCtx.strokeStyle = color; graphCtx.lineWidth = 2;
+        graphCtx.beginPath(); graphCtx.strokeStyle = color; graphCtx.lineWidth = 2 * dpr;
         graphCtx.moveTo(0, getY(popHistory[0][prop]));
         for(let i=1; i<popHistory.length; i++) graphCtx.lineTo(getX(i), getY(popHistory[i][prop])); graphCtx.stroke();
     };
@@ -589,49 +600,60 @@ function draw() {
     gl.clearColor(0.02, 0.02, 0.02, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
-    // 1. Calculate Matrix
-    // Projection: Map 0..width to -1..1
-    // View: Camera transform
-    const w = canvas.width, h = canvas.height;
-    const z = camera.zoom;
+    // Projection matrix adjusted for DPI
+    const w = canvas.width, h = canvas.height; // Physical pixels
+    const z = camera.zoom * dpr; // Scale zoom by DPI for consistent view size
     const tx = camera.x, ty = camera.y;
     
-    // Standard 2D projection matrix
-    // X: 2/w, Y: -2/h, TransX: -1, TransY: 1
-    // We combine view+projection in one go
-    const m00 = (2 * z) / w;
-    const m11 = -(2 * z) / h; // Flip Y
-    const m20 = (2 * (tx * z)) / w - 1; // Translation logic adjusted for center? No, simpler:
-    // Let's transform World -> Screen -> Clip
-    // ScreenX = (WorldX * z) + cx
-    // ClipX = (ScreenX / w) * 2 - 1
-    // ClipX = ((WorldX * z + cx) / w) * 2 - 1
-    // ClipX = WorldX * (2z/w) + (2cx/w - 1)
-    
+    // Standard 2D ortho projection
     const mat = [
         (2 * z) / w, 0, 0,
         0, -(2 * z) / h, 0,
-        (2 * (tx)) / w - 1, -(2 * (ty)) / h + 1, 1 // Fixed logic for top-left 0,0
+        (2 * (tx * z)) / w - 1, -(2 * (ty * z)) / h + 1, 1 
     ];
+    // Fix translation: (WorldPos * Zoom + Camera) -> NDC
+    // Actually, the shader does: worldPos = instance + vertex.
+    // final = matrix * worldPos.
+    // We need matrix to do: (worldPos * zoom * dpr + camera * zoom * dpr) -> NDC
+    // My matrix above effectively does: X * (2z/w) + (2tx/w - 1)
+    // = (X*z + tx) * 2/w - 1. This assumes tx is already scaled by z? 
+    // No, camera.x is in World Units (pixels). 
+    // Correct transform: ScreenX = (WorldX + CameraX) * Zoom * DPR.
+    // NDC_X = (ScreenX / W) * 2 - 1.
+    // = ((WorldX + CameraX) * Zoom * DPR / W) * 2 - 1.
+    // = WorldX * (2*Zoom*DPR/W) + (CameraX * 2*Zoom*DPR/W - 1).
+    
+    // Let's recalculate mat array indices
+    const scaleX = (2 * z) / w;
+    const scaleY = -(2 * z) / h;
+    const transX = (tx * 2 * z) / w - 1;
+    const transY = -(ty * 2 * z) / h + 1;
 
-    gl.uniformMatrix3fv(glState.locMatrix, false, mat);
+    gl.uniformMatrix3fv(glState.locMatrix, false, [
+        scaleX, 0, 0,
+        0, scaleY, 0,
+        transX, transY, 1
+    ]);
 
-    // 2. Collect Instances
-    // We cull in JS to save buffer upload size, though GPU can handle more
     let iData = glState.instanceData;
     let count = 0;
     
-    let startCol = Math.floor(-camera.x / (BASE_TILE_SIZE * z));
-    let startRow = Math.floor(-camera.y / (BASE_TILE_SIZE * z));
-    let viewCols = Math.ceil(w / (BASE_TILE_SIZE * z));
-    let viewRows = Math.ceil(h / (BASE_TILE_SIZE * z));
+    // Culling
+    // Visible World Area: 
+    // Left = -CameraX, Right = Width/Zoom - CameraX
+    let logicW = w / z; 
+    let logicH = h / z;
+    
+    let startCol = Math.floor(-tx / BASE_TILE_SIZE);
+    let startRow = Math.floor(-ty / BASE_TILE_SIZE);
+    let viewCols = Math.ceil(logicW / BASE_TILE_SIZE);
+    let viewRows = Math.ceil(logicH / BASE_TILE_SIZE);
+    
     let pad = 2;
     let minX = Math.max(0, startCol - pad), maxX = Math.min(cols, startCol + viewCols + pad);
     let minY = Math.max(0, startRow - pad), maxY = Math.min(rows, startRow + viewRows + pad);
     
-    // Use larger sprites when zoomed in
     let drawSize = BASE_TILE_SIZE; 
-    // Push function
     const push = (x,y,type) => {
         let idx = count * 4;
         iData[idx] = x * BASE_TILE_SIZE;
@@ -662,7 +684,6 @@ function draw() {
         }
     }
 
-    // 3. Draw
     gl.bindBuffer(gl.ARRAY_BUFFER, glState.instanceBuffer);
     gl.bufferSubData(gl.ARRAY_BUFFER, 0, iData.subarray(0, count * 4));
     gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, count);
