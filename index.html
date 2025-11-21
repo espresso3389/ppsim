@@ -237,9 +237,10 @@ function setupWebGL() {
         let dx = x * 64;
         let cx = dx + 32, cy = 32;
         ctx.save(); // Clip so glow/shadows don't bleed into adjacent sprites
-        ctx.beginPath(); ctx.rect(dx, 0, 63, 64); ctx.clip();
+        const inset = 1, clipSize = 62; // keep 1px gutter on each side
+        ctx.beginPath(); ctx.rect(dx + inset, inset, clipSize, clipSize); ctx.clip();
         ctx.clearRect(dx, 0, 64, 64);
-        if(type === 'rock') { ctx.fillStyle = '#222'; ctx.fillRect(dx,0,64,64); ctx.fillStyle = '#333'; ctx.fillRect(dx+2,2,60,60); ctx.restore(); return; }
+        if(type === 'rock') { ctx.fillStyle = '#222'; ctx.fillRect(dx+inset, inset, clipSize, clipSize); ctx.fillStyle = '#333'; ctx.fillRect(dx+inset+2, inset+2, 58, 58); ctx.restore(); return; }
         if(type === 'food') { ctx.shadowBlur = 10; ctx.shadowColor = '#00ff00'; ctx.fillStyle = '#00aa00'; ctx.beginPath(); ctx.arc(cx,cy,24,0,Math.PI*2); ctx.fill(); ctx.shadowBlur = 0; ctx.restore(); return; }
         ctx.shadowBlur = 5; ctx.shadowColor = color; ctx.beginPath(); ctx.fillStyle = color; ctx.arc(cx, cy, 28, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0;
         ctx.beginPath(); ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.arc(cx-10, cy-10, 10, 0, Math.PI*2); ctx.fill();
