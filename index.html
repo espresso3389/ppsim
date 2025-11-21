@@ -6,7 +6,6 @@
     <title>EcoSim HD</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #050505; font-family: 'Segoe UI', Roboto, monospace; color: #ccc; touch-action: none; }
-        /* Canvas scales based on CSS, but renders based on internal resolution */
         canvas { display: block; touch-action: none; width: 100%; height: 100%; }
         
         /* HUD */
@@ -127,7 +126,8 @@
     <canvas id="simCanvas"></canvas>
 
 <script>
-// --- WEBGL SHADERS (Pass 1: Sprites) ---
+// --- WEBGL SHADERS ---
+// Vertex Shader: Applies Scale (Zoom) then Translation (Pan)
 const VS_SOURCE = `#version 300 es
 layout(location=0) in vec2 a_pos;      
 layout(location=1) in vec4 a_instance; // x, y, size, typeIndex
@@ -135,12 +135,10 @@ uniform mat3 u_matrix;
 uniform vec2 u_atlasSize;              
 out vec2 v_texCoord;
 void main() {
-    // Expand vertex to world pos
     vec2 worldPos = a_instance.xy + (a_pos * a_instance.z);
     vec3 finalPos = u_matrix * vec3(worldPos, 1.0);
     gl_Position = vec4(finalPos.xy, 0.0, 1.0);
     
-    // Map texture coordinates from Atlas
     float spriteIdx = a_instance.w;
     float spriteSize = 64.0;
     float u = (spriteIdx * spriteSize + a_pos.x * spriteSize) / u_atlasSize.x;
@@ -154,9 +152,7 @@ in vec2 v_texCoord;
 uniform sampler2D u_texture;
 out vec4 outColor;
 void main() {
-    vec4 color = texture(u_texture, v_texCoord);
-    // Smooth alpha blending instead of discard for nicer edges
-    outColor = color;
+    outColor = texture(u_texture, v_texCoord);
 }`;
 
 const DEFAULT_CONF = {
@@ -177,19 +173,23 @@ let grid, cols, rows, entities = [], isPaused = false;
 let sectors = [], sCols, sRows, SECTOR_SIZE;
 let camera = { x: 0, y: 0, zoom: 1 };
 let isDragging = false, lastMouse = { x: 0, y: 0 }, currentTool = 'pan'; 
-let lastTouchDist = 0, isPinching = false, lastPinchCenter = {x:0, y:0};
+
+// Touch State
+let isPinching = false;
+let pinchStartDist = 0;
+let pinchStartZoom = 1;
+let pinchStartWorld = {x:0, y:0};
+
 let lastTime = 0, frameCount = 0, fpsTimer = 0, lastFrameTime = 0; 
 let popHistory = [], MAX_HISTORY = 300; 
 let canvas, gl, graphCanvas, graphCtx;
 let glState = {};
 let dpr = 1;
 
-// Sprite IDs
 const SID = { ROCK:0, FOOD:1, PREY:2, PREY_ACT:3, PREY_SLP:4, PRED:5, PRED_ACT:6, PRED_SLP:7 };
 
 window.onload = () => {
     canvas = document.getElementById('simCanvas');
-    // Request AA and Alpha for smooth edges
     gl = canvas.getContext('webgl2', { alpha: true, antialias: true, premultipliedAlpha: false });
     if(!gl) { alert("WebGL2 not supported"); return; }
     
@@ -206,23 +206,19 @@ window.onload = () => {
 };
 
 function resizeCanvas() {
-    // High DPI support
     dpr = window.devicePixelRatio || 1;
     canvas.width = window.innerWidth * dpr;
     canvas.height = window.innerHeight * dpr;
     gl.viewport(0, 0, canvas.width, canvas.height);
 }
 
-// --- WEBGL SETUP ---
 function setupWebGL() {
-    // Enable Blending for smooth edges (Antialiasing inside textures)
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
     const createShader = (type, src) => {
         const s = gl.createShader(type);
         gl.shaderSource(s, src); gl.compileShader(s);
-        if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)) console.error(gl.getShaderInfoLog(s));
         return s;
     };
     const program = gl.createProgram();
@@ -232,133 +228,82 @@ function setupWebGL() {
     gl.useProgram(program);
     glState.program = program;
 
-    // Generate Texture Atlas
     const atlasCanvas = document.createElement('canvas');
-    const spriteSize = 64;
-    const count = 8; 
-    atlasCanvas.width = spriteSize * count;
-    atlasCanvas.height = spriteSize;
+    const spriteSize = 64; const count = 8; 
+    atlasCanvas.width = spriteSize * count; atlasCanvas.height = spriteSize;
     const ctx = atlasCanvas.getContext('2d');
     
     const drawFace = (dx, color, type, state) => {
         let cx = dx + 32, cy = 32;
-        // Clear background for alpha
         ctx.clearRect(dx, 0, 64, 64);
-        
-        if(type === 'rock') { 
-            ctx.fillStyle = '#222'; ctx.fillRect(dx,0,64,64); 
-            ctx.fillStyle = '#333'; ctx.fillRect(dx+2,2,60,60); return; 
-        }
-        if(type === 'food') {
-            // Glow
-            ctx.shadowBlur = 10; ctx.shadowColor = '#00ff00';
-            ctx.fillStyle = '#00aa00'; ctx.beginPath(); ctx.arc(cx,cy,24,0,Math.PI*2); ctx.fill(); 
-            ctx.shadowBlur = 0; return;
-        }
-        
-        // Smooth Entities
-        ctx.shadowBlur = 5; ctx.shadowColor = color;
-        ctx.beginPath(); ctx.fillStyle = color; ctx.arc(cx, cy, 28, 0, Math.PI*2); ctx.fill();
-        ctx.shadowBlur = 0;
-        
-        // Reflection
+        if(type === 'rock') { ctx.fillStyle = '#222'; ctx.fillRect(dx,0,64,64); ctx.fillStyle = '#333'; ctx.fillRect(dx+2,2,60,60); return; }
+        if(type === 'food') { ctx.shadowBlur = 10; ctx.shadowColor = '#00ff00'; ctx.fillStyle = '#00aa00'; ctx.beginPath(); ctx.arc(cx,cy,24,0,Math.PI*2); ctx.fill(); ctx.shadowBlur = 0; return; }
+        ctx.shadowBlur = 5; ctx.shadowColor = color; ctx.beginPath(); ctx.fillStyle = color; ctx.arc(cx, cy, 28, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0;
         ctx.beginPath(); ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.arc(cx-10, cy-10, 10, 0, Math.PI*2); ctx.fill();
-        
         if(state === 'sleep') {
             ctx.strokeStyle='#333'; ctx.lineWidth=3; ctx.lineCap='round';
             ctx.beginPath(); ctx.moveTo(cx-15,cy); ctx.lineTo(cx-5,cy); ctx.stroke();
             ctx.beginPath(); ctx.moveTo(cx+5,cy); ctx.lineTo(cx+15,cy); ctx.stroke();
             ctx.fillStyle='#fff'; ctx.font='bold 16px monospace'; ctx.fillText('z', cx+10, cy-15);
         } else {
-            ctx.fillStyle='#fff'; 
-            let es = (state === 'action' && type === 'prey') ? 11 : 9;
-            ctx.beginPath(); ctx.arc(cx-10, cy-5, es, 0, Math.PI*2); ctx.fill();
-            ctx.beginPath(); ctx.arc(cx+10, cy-5, es, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle='#000'; 
-            ctx.beginPath(); ctx.arc(cx-10, cy-5, 4, 0, Math.PI*2); ctx.fill();
-            ctx.beginPath(); ctx.arc(cx+10, cy-5, 4, 0, Math.PI*2); ctx.fill();
-            
+            ctx.fillStyle='#fff'; let es = (state === 'action' && type === 'prey') ? 11 : 9;
+            ctx.beginPath(); ctx.arc(cx-10, cy-5, es, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(cx+10, cy-5, es, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle='#000'; ctx.beginPath(); ctx.arc(cx-10, cy-5, 4, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(cx+10, cy-5, 4, 0, Math.PI*2); ctx.fill();
             ctx.beginPath(); ctx.strokeStyle='#000'; ctx.lineWidth=2.5; ctx.lineCap='round';
-            if(type==='predator') {
-                ctx.moveTo(cx-18,cy-12); ctx.lineTo(cx-4,cy-8); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(cx+4,cy-8); ctx.lineTo(cx+18,cy-12); ctx.stroke();
-            }
-            ctx.beginPath();
-            if(state==='action' && type==='prey') { ctx.arc(cx,cy+12,6,0,Math.PI*2); ctx.stroke(); }
-            else if(type==='predator') { ctx.moveTo(cx-10,cy+14); ctx.lineTo(cx+10,cy+14); ctx.stroke(); }
-            else { ctx.arc(cx,cy+12,8,0,Math.PI,false); ctx.stroke(); }
+            if(type==='predator') { ctx.moveTo(cx-18,cy-12); ctx.lineTo(cx-4,cy-8); ctx.stroke(); ctx.beginPath(); ctx.moveTo(cx+4,cy-8); ctx.lineTo(cx+18,cy-12); ctx.stroke(); }
+            ctx.beginPath(); if(state==='action' && type==='prey') { ctx.arc(cx,cy+12,6,0,Math.PI*2); ctx.stroke(); } else if(type==='predator') { ctx.moveTo(cx-10,cy+14); ctx.lineTo(cx+10,cy+14); ctx.stroke(); } else { ctx.arc(cx,cy+12,8,0,Math.PI,false); ctx.stroke(); }
         }
     };
-    drawFace(0, null, 'rock');
-    drawFace(64, null, 'food');
-    drawFace(128, '#00ccff', 'prey', 'idle');
-    drawFace(192, '#aaaaff', 'prey', 'action');
-    drawFace(256, '#00ccff', 'prey', 'sleep');
-    drawFace(320, '#ff2222', 'predator', 'idle');
-    drawFace(384, '#ff5555', 'predator', 'action');
-    drawFace(448, '#ff2222', 'predator', 'sleep');
+    drawFace(0, null, 'rock'); drawFace(64, null, 'food');
+    drawFace(128, '#00ccff', 'prey', 'idle'); drawFace(192, '#aaaaff', 'prey', 'action'); drawFace(256, '#00ccff', 'prey', 'sleep');
+    drawFace(320, '#ff2222', 'predator', 'idle'); drawFace(384, '#ff5555', 'predator', 'action'); drawFace(448, '#ff2222', 'predator', 'sleep');
 
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, atlasCanvas);
-    
-    // TRILINEAR FILTERING for smooth zoom
     gl.generateMipmap(gl.TEXTURE_2D);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    
     gl.uniform1i(gl.getUniformLocation(program, 'u_texture'), 0);
     gl.uniform2f(gl.getUniformLocation(program, 'u_atlasSize'), atlasCanvas.width, atlasCanvas.height);
 
-    const vao = gl.createVertexArray();
-    gl.bindVertexArray(vao);
-
-    const posBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
+    const vao = gl.createVertexArray(); gl.bindVertexArray(vao);
+    const posBuffer = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0,0, 1,0, 0,1, 1,0, 1,1, 0,1]), gl.STATIC_DRAW);
-    gl.enableVertexAttribArray(0);
-    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
 
-    const instanceBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, instanceBuffer);
-    // Large buffer for 100k entities
+    const instanceBuffer = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, instanceBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, 100000 * 16, gl.DYNAMIC_DRAW); 
-    gl.enableVertexAttribArray(1);
-    gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 16, 0); 
-    gl.vertexAttribDivisor(1, 1); 
+    gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 16, 0); gl.vertexAttribDivisor(1, 1); 
 
-    glState.vao = vao;
-    glState.instanceBuffer = instanceBuffer;
+    glState.vao = vao; glState.instanceBuffer = instanceBuffer;
     glState.instanceData = new Float32Array(100000 * 4);
     glState.locMatrix = gl.getUniformLocation(program, 'u_matrix');
 }
 
-// --- INPUT & UI ---
+// --- ROBUST INPUT HANDLING ---
 function setupInput() {
+    // Helper: Convert Screen(CSS pixels) -> World(Grid units)
+    // Formula: World = (Screen - Pan) / Zoom
+    // Then we divide by TileSize to get Grid Index
     const getGridPos = (cx, cy) => {
-        const rect = canvas.getBoundingClientRect(); // Physical coords
-        // Adjust for zoom and pan
+        const rect = canvas.getBoundingClientRect();
         const mx = cx - rect.left, my = cy - rect.top;
-        const wx = (mx - camera.x) / camera.zoom, wy = (my - camera.y) / camera.zoom;
+        const wx = (mx - camera.x) / camera.zoom;
+        const wy = (my - camera.y) / camera.zoom;
         return { x: Math.floor(wx / BASE_TILE_SIZE), y: Math.floor(wy / BASE_TILE_SIZE) };
     }
     const applyTool = (cx, cy) => {
         const p = getGridPos(cx, cy);
         if(p.x < 0 || p.x >= cols || p.y < 0 || p.y >= rows) return;
         if(currentTool === 'pan') return;
-        if(currentTool === 'erase') {
-            if(grid.entities[p.x][p.y]) { grid.entities[p.x][p.y].dead = true; grid.entities[p.x][p.y] = null; }
-            grid.terrain[p.x][p.y] = null; return;
-        }
-        if (grid.terrain[p.x][p.y] === 'rock' && (currentTool === 'prey' || currentTool === 'predator' || currentTool === 'food')) return; 
-        if(currentTool === 'rock' || currentTool === 'food') {
-             if(grid.entities[p.x][p.y]) { grid.entities[p.x][p.y].dead = true; grid.entities[p.x][p.y] = null; }
-             grid.terrain[p.x][p.y] = currentTool; return;
-        }
-        if((currentTool === 'prey' || currentTool === 'predator') && !grid.entities[p.x][p.y]) {
-            let ent = new Entity(p.x, p.y, currentTool); entities.push(ent); grid.entities[p.x][p.y] = ent;
-        }
+        if(currentTool === 'erase') { if(grid.entities[p.x][p.y]) { grid.entities[p.x][p.y].dead=true; grid.entities[p.x][p.y]=null; } grid.terrain[p.x][p.y]=null; return; }
+        if(grid.terrain[p.x][p.y]==='rock' && (currentTool==='prey'||currentTool==='predator'||currentTool==='food')) return; 
+        if(currentTool==='rock'||currentTool==='food') { if(grid.entities[p.x][p.y]) { grid.entities[p.x][p.y].dead=true; grid.entities[p.x][p.y]=null; } grid.terrain[p.x][p.y]=currentTool; return; }
+        if((currentTool==='prey'||currentTool==='predator') && !grid.entities[p.x][p.y]) { let ent=new Entity(p.x,p.y,currentTool); entities.push(ent); grid.entities[p.x][p.y]=ent; }
     }
+
+    // Mouse
     canvas.addEventListener('mousedown', e => { isDragging = true; lastMouse = {x: e.clientX, y: e.clientY}; applyTool(e.clientX, e.clientY); });
     window.addEventListener('mouseup', () => { isDragging = false; if(currentTool === 'pan') canvas.style.cursor = 'grab'; });
     window.addEventListener('mousemove', e => {
@@ -375,35 +320,84 @@ function setupInput() {
         const rect = canvas.getBoundingClientRect();
         const mx = e.clientX - rect.left, my = e.clientY - rect.top;
         let newZoom = Math.max(0.1, Math.min(camera.zoom * (e.deltaY > 0 ? 0.9 : 1.1), 20));
-        let scaleChange = newZoom / camera.zoom;
-        camera.x = mx - (mx - camera.x) * scaleChange; camera.y = my - (my - camera.y) * scaleChange;
+        // Logic: Screen = World * Zoom + Pan
+        // So World = (Screen - Pan) / Zoom
+        // We want World Point under mouse to stay constant.
+        // WorldX = (mx - oldPan) / oldZoom
+        // newPan = mx - WorldX * newZoom
+        let worldX = (mx - camera.x) / camera.zoom;
+        let worldY = (my - camera.y) / camera.zoom;
+        
+        camera.x = mx - worldX * newZoom;
+        camera.y = my - worldY * newZoom;
         camera.zoom = newZoom;
     }, {passive:false});
 
+    // Touch - Absolute Anchoring Logic
     const getTouchDist = (e) => Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-    const getTouchCenter = (e) => e.touches.length >= 2 ? {x: (e.touches[0].clientX+e.touches[1].clientX)/2, y: (e.touches[0].clientY+e.touches[1].clientY)/2} : {x:0,y:0};
+    const getTouchCenter = (e) => ({x: (e.touches[0].clientX+e.touches[1].clientX)/2, y: (e.touches[0].clientY+e.touches[1].clientY)/2});
 
     canvas.addEventListener('touchstart', e => {
         if(e.target !== canvas) return; e.preventDefault();
-        if(e.touches.length === 1) { isDragging = true; isPinching = false; lastMouse = {x: e.touches[0].clientX, y: e.touches[0].clientY}; if(currentTool !== 'pan') applyTool(lastMouse.x, lastMouse.y); }
-        else if (e.touches.length === 2) { isPinching = true; isDragging = false; lastTouchDist = getTouchDist(e); lastPinchCenter = getTouchCenter(e); }
+        
+        if(e.touches.length === 1) {
+            isDragging = true; isPinching = false;
+            lastMouse = {x: e.touches[0].clientX, y: e.touches[0].clientY};
+            if(currentTool !== 'pan') applyTool(lastMouse.x, lastMouse.y);
+        } else if (e.touches.length === 2) {
+            isPinching = true; isDragging = false;
+            
+            // Capture initial state
+            pinchStartDist = getTouchDist(e);
+            pinchStartZoom = camera.zoom;
+            let center = getTouchCenter(e);
+            
+            // Calculate the WORLD POINT exactly under the fingers center
+            const rect = canvas.getBoundingClientRect();
+            const mx = center.x - rect.left, my = center.y - rect.top;
+            pinchStartWorld.x = (mx - camera.x) / camera.zoom;
+            pinchStartWorld.y = (my - camera.y) / camera.zoom;
+        }
     }, {passive: false});
+
     canvas.addEventListener('touchmove', e => {
         if(e.target !== canvas) return; e.preventDefault();
+        
         if(isPinching && e.touches.length === 2) {
-            let dist = getTouchDist(e), center = getTouchCenter(e);
-            let newZoom = Math.max(0.1, Math.min(camera.zoom * (dist / lastTouchDist), 20));
-            let effectiveChange = newZoom / camera.zoom; camera.zoom = newZoom;
-            camera.x = center.x - (lastPinchCenter.x - camera.x) * effectiveChange;
-            camera.y = center.y - (lastPinchCenter.y - camera.y) * effectiveChange;
-            lastTouchDist = dist; lastPinchCenter = center;
+            let dist = getTouchDist(e);
+            let center = getTouchCenter(e);
+            
+            // 1. Calculate New Zoom
+            let newZoom = pinchStartZoom * (dist / pinchStartDist);
+            newZoom = Math.max(0.1, Math.min(newZoom, 20));
+            camera.zoom = newZoom;
+            
+            // 2. Calculate New Camera Pan to keep World Point under Fingers
+            // NewPan = MouseScreen - WorldPoint * NewZoom
+            const rect = canvas.getBoundingClientRect();
+            const mx = center.x - rect.left, my = center.y - rect.top;
+            
+            camera.x = mx - pinchStartWorld.x * camera.zoom;
+            camera.y = my - pinchStartWorld.y * camera.zoom;
+
         } else if (isDragging && e.touches.length === 1) {
             let tx = e.touches[0].clientX, ty = e.touches[0].clientY;
-            if(currentTool === 'pan') { camera.x += tx - lastMouse.x; camera.y += ty - lastMouse.y; } else applyTool(tx, ty);
+            if(currentTool === 'pan') {
+                camera.x += tx - lastMouse.x; camera.y += ty - lastMouse.y;
+            } else applyTool(tx, ty);
             lastMouse = {x: tx, y: ty};
         }
     }, {passive: false});
-    canvas.addEventListener('touchend', e => { e.preventDefault(); if(e.touches.length < 2) isPinching = false; if(e.touches.length === 0) isDragging = false; if(e.touches.length === 1) { lastMouse = {x: e.touches[0].clientX, y: e.touches[0].clientY}; isDragging = true; }});
+
+    canvas.addEventListener('touchend', e => {
+        e.preventDefault();
+        if(e.touches.length < 2) isPinching = false;
+        if(e.touches.length === 0) isDragging = false;
+        if(e.touches.length === 1) {
+             lastMouse = {x: e.touches[0].clientX, y: e.touches[0].clientY};
+             isDragging = true;
+        }
+    });
 }
 
 function setupUI() {
@@ -425,12 +419,10 @@ function setTool(t) {
 function togglePanel() { document.getElementById('panel').classList.toggle('open'); }
 function togglePause() { isPaused = !isPaused; document.getElementById('btn-pause').innerText = isPaused ? "Resume" : "Pause"; }
 
-// --- SIMULATION CORE ---
 function restartSim() {
     cols = CONF.mapSize; rows = CONF.mapSize;
     let worldW = cols * BASE_TILE_SIZE;
     let worldH = rows * BASE_TILE_SIZE;
-    // Use logical pixels for calculations
     let logicW = canvas.width / dpr;
     if(window.innerWidth < 768) {
         let targetZoom = (logicW * 0.95) / worldW;
@@ -580,7 +572,6 @@ function reproduce(e) {
 
 function updateGraph(prey, pred) {
     popHistory.push({ p: prey, r: pred }); if(popHistory.length > MAX_HISTORY) popHistory.shift();
-    // Increase internal res of graph for HD look
     const w = 200 * dpr, h = 60 * dpr;
     if(graphCanvas.width !== w) { graphCanvas.width=w; graphCanvas.height=h; }
     graphCtx.clearRect(0, 0, w, h);
@@ -595,59 +586,35 @@ function updateGraph(prey, pred) {
     drawLine('p', '#00ccff'); drawLine('r', '#ff2222');
 }
 
-// --- WEBGL RENDERER ---
 function draw() {
     gl.clearColor(0.02, 0.02, 0.02, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
-    // Projection matrix adjusted for DPI
-    const w = canvas.width, h = canvas.height; // Physical pixels
-    const z = camera.zoom * dpr; // Scale zoom by DPI for consistent view size
+    const w = canvas.width, h = canvas.height;
+    const z = camera.zoom * dpr; 
     const tx = camera.x, ty = camera.y;
     
-    // Standard 2D ortho projection
-    const mat = [
-        (2 * z) / w, 0, 0,
-        0, -(2 * z) / h, 0,
-        (2 * (tx * z)) / w - 1, -(2 * (ty * z)) / h + 1, 1 
-    ];
-    // Fix translation: (WorldPos * Zoom + Camera) -> NDC
-    // Actually, the shader does: worldPos = instance + vertex.
-    // final = matrix * worldPos.
-    // We need matrix to do: (worldPos * zoom * dpr + camera * zoom * dpr) -> NDC
-    // My matrix above effectively does: X * (2z/w) + (2tx/w - 1)
-    // = (X*z + tx) * 2/w - 1. This assumes tx is already scaled by z? 
-    // No, camera.x is in World Units (pixels). 
-    // Correct transform: ScreenX = (WorldX + CameraX) * Zoom * DPR.
-    // NDC_X = (ScreenX / W) * 2 - 1.
-    // = ((WorldX + CameraX) * Zoom * DPR / W) * 2 - 1.
-    // = WorldX * (2*Zoom*DPR/W) + (CameraX * 2*Zoom*DPR/W - 1).
-    
-    // Let's recalculate mat array indices
+    // Render Matrix: Screen = World * Scale + Pan
+    // Scale = 2 * Z / W
+    // Pan = (CameraPan * DPR * 2 / W) - 1
+    // Note: We do NOT multiply Pan by Zoom here. Pan is already in Screen Pixels.
     const scaleX = (2 * z) / w;
     const scaleY = -(2 * z) / h;
-    const transX = (tx * 2 * z) / w - 1;
-    const transY = -(ty * 2 * z) / h + 1;
+    
+    const transX = (tx * 2 * dpr) / w - 1;
+    const transY = -(ty * 2 * dpr) / h + 1;
 
-    gl.uniformMatrix3fv(glState.locMatrix, false, [
-        scaleX, 0, 0,
-        0, scaleY, 0,
-        transX, transY, 1
-    ]);
+    gl.uniformMatrix3fv(glState.locMatrix, false, [scaleX, 0, 0, 0, scaleY, 0, transX, transY, 1]);
 
     let iData = glState.instanceData;
     let count = 0;
     
-    // Culling
-    // Visible World Area: 
-    // Left = -CameraX, Right = Width/Zoom - CameraX
-    let logicW = w / z; 
-    let logicH = h / z;
-    
-    let startCol = Math.floor(-tx / BASE_TILE_SIZE);
-    let startRow = Math.floor(-ty / BASE_TILE_SIZE);
-    let viewCols = Math.ceil(logicW / BASE_TILE_SIZE);
-    let viewRows = Math.ceil(logicH / BASE_TILE_SIZE);
+    // Culling logic must match the "Screen = World*Zoom + Pan" logic
+    // Screen Left = 0 -> 0 = WorldLeft * Zoom + Pan -> WorldLeft = -Pan / Zoom
+    let startCol = Math.floor(-tx / (BASE_TILE_SIZE * camera.zoom));
+    let startRow = Math.floor(-ty / (BASE_TILE_SIZE * camera.zoom));
+    let viewCols = Math.ceil((w/dpr) / (BASE_TILE_SIZE * camera.zoom));
+    let viewRows = Math.ceil((h/dpr) / (BASE_TILE_SIZE * camera.zoom));
     
     let pad = 2;
     let minX = Math.max(0, startCol - pad), maxX = Math.min(cols, startCol + viewCols + pad);
@@ -656,10 +623,8 @@ function draw() {
     let drawSize = BASE_TILE_SIZE; 
     const push = (x,y,type) => {
         let idx = count * 4;
-        iData[idx] = x * BASE_TILE_SIZE;
-        iData[idx+1] = y * BASE_TILE_SIZE;
-        iData[idx+2] = drawSize;
-        iData[idx+3] = type;
+        iData[idx] = x * BASE_TILE_SIZE; iData[idx+1] = y * BASE_TILE_SIZE;
+        iData[idx+2] = drawSize; iData[idx+3] = type;
         count++;
     };
 
