@@ -2,12 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <!-- Updated viewport to prevent browser scaling and handle touch better -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>EcoSim Mobile</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #050505; font-family: 'Segoe UI', Roboto, monospace; color: #ccc; touch-action: none; }
-        canvas { display: block; cursor: crosshair; touch-action: none; }
+        canvas { display: block; touch-action: none; }
         
         /* HUD */
         #hud { position: absolute; top: 15px; left: 15px; background: rgba(10, 10, 10, 0.8); border: 1px solid #333; border-radius: 6px; padding: 10px 15px; pointer-events: none; user-select: none; display: flex; flex-direction: column; gap: 5px; font-family: 'Courier New', monospace; font-weight: bold; z-index: 50; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
@@ -67,22 +66,16 @@
             #toolbar {
                 width: 95%;
                 bottom: 15px;
-                overflow-x: auto; /* Allow scrolling for toolbar */
+                overflow-x: auto;
                 justify-content: flex-start;
+                -webkit-overflow-scrolling: touch;
             }
             .tool-btn {
-                width: 50px; height: 50px; font-size: 1.4rem; /* Larger targets */
+                width: 50px; height: 50px; font-size: 1.4rem;
             }
-            #panel {
-                width: 100%; /* Full screen settings on mobile */
-            }
-            #hud {
-                font-size: 0.8rem;
-                padding: 8px;
-            }
-            #graph-container {
-                display: none; /* Hide graph on small screens to save space */
-            }
+            #panel { width: 100%; }
+            #hud { font-size: 0.8rem; padding: 8px; }
+            #graph-container { display: none; }
         }
     </style>
 </head>
@@ -97,7 +90,7 @@
     <div id="graph-container"><canvas id="graphCanvas" width="200" height="60"></canvas></div>
 
     <div id="toolbar">
-        <div class="tool-btn active" id="tool-pan" onclick="setTool('pan')" title="Pan/Move Camera">✋</div>
+        <div class="tool-btn active" id="tool-pan" onclick="setTool('pan')" title="Pan Camera">✋</div>
         <div class="tool-btn" id="tool-prey" onclick="setTool('prey')" title="Add Prey" style="color:#00ccff">●</div>
         <div class="tool-btn" id="tool-pred" onclick="setTool('predator')" title="Add Predator" style="color:#ff2222">●</div>
         <div class="tool-btn" id="tool-rock" onclick="setTool('rock')" title="Add Rock">⬛</div>
@@ -113,7 +106,6 @@
             <button class="close-btn" onclick="togglePanel()">×</button>
         </div>
         <div class="content">
-            
             <div class="section">
                 <div class="section-title">World Settings</div>
                 <div class="control-group">
@@ -125,7 +117,7 @@
                     <input type="range" id="in-simSpeed" min="1" max="60" step="1">
                 </div>
             </div>
-
+            <!-- Sim Parameters -->
             <div class="section">
                 <div class="section-title">Initial Density</div>
                 <div class="control-group">
@@ -137,7 +129,6 @@
                     <input type="range" id="in-densityPred" min="0.005" max="0.05" step="0.005">
                 </div>
             </div>
-
             <div class="section">
                 <div class="section-title">Prey Stats</div>
                 <div class="control-group">
@@ -153,7 +144,6 @@
                     <input type="range" id="in-preyGainFood" min="5" max="100" step="5">
                 </div>
             </div>
-
             <div class="section">
                 <div class="section-title">Predator Stats</div>
                 <div class="control-group">
@@ -169,7 +159,6 @@
                     <input type="range" id="in-predHuntCost" min="0" max="10" step="1">
                 </div>
             </div>
-
             <div class="section">
                 <div class="section-title">Environment</div>
                 <div class="control-group">
@@ -177,7 +166,6 @@
                     <input type="range" id="in-foodSpawnRate" min="1" max="100" step="1">
                 </div>
             </div>
-
             <div class="btn-row">
                 <button class="action-btn btn-gray" id="btn-pause" onclick="togglePause()">Pause</button>
                 <button class="action-btn btn-blue" onclick="restartSim()">Apply & Restart</button>
@@ -216,19 +204,17 @@ let SECTOR_SIZE;
 let camera = { x: 0, y: 0, zoom: 1 };
 let isDragging = false;
 let lastMouse = { x: 0, y: 0 };
-let currentTool = 'pan'; // pan, prey, predator, rock, food, erase
+let currentTool = 'pan'; 
 
-// Touch variables
+// --- TOUCH STATE ---
 let lastTouchDist = 0;
 let isPinching = false;
-let touchStart = {x:0, y:0};
+let lastPinchCenter = {x:0, y:0};
 
 let spriteCache = {}; 
-
 let lastTime = 0, frameCount = 0, fpsTimer = 0;
 let lastFrameTime = 0; 
 let popHistory = [], MAX_HISTORY = 300; 
-
 let canvas, ctx, graphCanvas, graphCtx;
 
 window.onload = () => {
@@ -238,134 +224,34 @@ window.onload = () => {
     graphCtx = graphCanvas.getContext('2d');
 
     generateSprites();
-    
     setupUI();
     setupInput();
-    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('resize', () => { resizeCanvas(); });
     resizeCanvas(); 
     restartSim();   
     loop(0);
 };
 
-// --- SPRITE GENERATOR ---
-function generateSprites() {
-    const types = ['prey', 'predator'];
-    const states = ['idle', 'action', 'sleep'];
-    
-    const drawFace = (ctx, color, type, state) => {
-        let size = 64;
-        let cx = size/2, cy = size/2;
-        
-        ctx.beginPath();
-        ctx.fillStyle = color;
-        ctx.arc(cx, cy, 28, 0, Math.PI*2);
-        ctx.fill();
-        
-        ctx.beginPath();
-        ctx.fillStyle = 'rgba(255,255,255,0.2)';
-        ctx.arc(cx-10, cy-10, 10, 0, Math.PI*2);
-        ctx.fill();
-
-        if(state === 'sleep') {
-            ctx.strokeStyle = '#333'; ctx.lineWidth = 3;
-            ctx.beginPath(); ctx.moveTo(cx-15, cy); ctx.lineTo(cx-5, cy); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(cx+5, cy); ctx.lineTo(cx+15, cy); ctx.stroke();
-            ctx.fillStyle = '#fff'; ctx.font = 'bold 14px monospace'; ctx.fillText('z', cx+10, cy-15);
-        } else {
-            ctx.fillStyle = '#fff';
-            let eyeSize = (state === 'action' && type === 'prey') ? 10 : 8;
-            ctx.beginPath(); ctx.arc(cx-10, cy-5, eyeSize, 0, Math.PI*2); ctx.fill();
-            ctx.beginPath(); ctx.arc(cx+10, cy-5, eyeSize, 0, Math.PI*2); ctx.fill();
-            
-            ctx.fillStyle = '#000';
-            let pSize = 3;
-            ctx.beginPath(); ctx.arc(cx-10, cy-5, pSize, 0, Math.PI*2); ctx.fill();
-            ctx.beginPath(); ctx.arc(cx+10, cy-5, pSize, 0, Math.PI*2); ctx.fill();
-
-            if(type === 'predator') {
-                ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
-                ctx.beginPath(); ctx.moveTo(cx-18, cy-12); ctx.lineTo(cx-4, cy-8); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(cx+4, cy-8); ctx.lineTo(cx+18, cy-12); ctx.stroke();
-            }
-            ctx.beginPath();
-            ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
-            if(state === 'action' && type === 'prey') {
-                ctx.arc(cx, cy+10, 6, 0, Math.PI*2);
-                ctx.stroke();
-            } else if (type === 'predator') {
-                ctx.moveTo(cx-8, cy+12); ctx.lineTo(cx+8, cy+12); ctx.stroke();
-            } else {
-                ctx.arc(cx, cy+10, 8, 0, Math.PI, false);
-                ctx.stroke();
-            }
-        }
-    };
-
-    types.forEach(t => {
-        states.forEach(s => {
-            let c = document.createElement('canvas');
-            c.width = 64; c.height = 64;
-            let x = c.getContext('2d');
-            let color = t === 'prey' ? '#00ccff' : '#ff2222';
-            if(s === 'action') color = t === 'prey' ? '#aaf' : '#ff0000';
-            drawFace(x, color, t, s);
-            spriteCache[`${t}_${s}`] = c;
-        });
-    });
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
 }
 
-function setupUI() {
-    const bind = (key, isPercentage = false) => {
-        const input = document.getElementById('in-' + key);
-        const label = document.getElementById('lbl-' + key);
-        let val = CONF[key];
-        if (isPercentage) val *= 100; 
-        input.value = parseFloat(val.toPrecision(6));
-        const updateLabel = () => label.innerText = input.value + (isPercentage ? '%' : '');
-        updateLabel();
-        input.oninput = () => {
-            updateLabel();
-            let newVal = parseFloat(input.value);
-            if (isPercentage) newVal /= 100;
-            CONF[key] = newVal;
-            if(key === 'visionRange') {
-                VISION_SQ = CONF.visionRange * CONF.visionRange;
-            }
-        };
-    };
-    bind('mapSize'); bind('simSpeed');
-    bind('densityPrey', true); bind('densityPred', true);
-    bind('preyMetabolism'); bind('preyBirthCost'); bind('preyGainFood');
-    bind('predMetabolism'); bind('predBirthCost'); bind('predHuntCost');
-    bind('foodSpawnRate');
-}
-
-function setTool(t) {
-    currentTool = t;
-    canvas.style.cursor = (t === 'pan') ? 'grab' : 'crosshair';
-    document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-    let btnId = 'tool-' + (t === 'predator' ? 'pred' : t);
-    document.getElementById(btnId).classList.add('active');
-}
+// --- INPUT HANDLING ---
 
 function setupInput() {
-    const getGridPos = (clientX, clientY) => {
+    const getGridPos = (cx, cy) => {
         const rect = canvas.getBoundingClientRect();
-        const mx = clientX - rect.left;
-        const my = clientY - rect.top;
-        // Convert screen to world
+        const mx = cx - rect.left;
+        const my = cy - rect.top;
         const wx = (mx - camera.x) / camera.zoom;
         const wy = (my - camera.y) / camera.zoom;
-        // Convert world to grid
-        const gx = Math.floor(wx / BASE_TILE_SIZE);
-        const gy = Math.floor(wy / BASE_TILE_SIZE);
-        return { x: gx, y: gy };
+        return { x: Math.floor(wx / BASE_TILE_SIZE), y: Math.floor(wy / BASE_TILE_SIZE) };
     }
 
-    const applyTool = (clientX, clientY) => {
-        const p = getGridPos(clientX, clientY);
+    const applyTool = (cx, cy) => {
+        const p = getGridPos(cx, cy);
         if(p.x < 0 || p.x >= cols || p.y < 0 || p.y >= rows) return;
-
         if(currentTool === 'pan') return;
 
         if(currentTool === 'erase') {
@@ -376,11 +262,10 @@ function setupInput() {
             grid.terrain[p.x][p.y] = null;
             return;
         }
-
-        if (grid.terrain[p.x][p.y] === 'rock' && (currentTool === 'prey' || currentTool === 'predator' || currentTool === 'food')) {
-            return; 
-        }
-
+        // Block placement on rock
+        if (grid.terrain[p.x][p.y] === 'rock' && (currentTool === 'prey' || currentTool === 'predator' || currentTool === 'food')) return; 
+        
+        // Rock/Food placement
         if(currentTool === 'rock' || currentTool === 'food') {
              if(grid.entities[p.x][p.y]) {
                  grid.entities[p.x][p.y].dead = true;
@@ -389,117 +274,114 @@ function setupInput() {
              grid.terrain[p.x][p.y] = currentTool;
              return;
         }
-
-        if(currentTool === 'prey' || currentTool === 'predator') {
-            if(!grid.entities[p.x][p.y]) {
-                let ent = new Entity(p.x, p.y, currentTool);
-                entities.push(ent);
-                grid.entities[p.x][p.y] = ent;
-            }
+        // Entity placement
+        if((currentTool === 'prey' || currentTool === 'predator') && !grid.entities[p.x][p.y]) {
+            let ent = new Entity(p.x, p.y, currentTool);
+            entities.push(ent);
+            grid.entities[p.x][p.y] = ent;
         }
     }
 
-    // --- MOUSE EVENTS ---
+    // MOUSE
     canvas.addEventListener('mousedown', e => { 
         isDragging = true; 
         lastMouse = {x: e.clientX, y: e.clientY}; 
         applyTool(e.clientX, e.clientY);
     });
-
-    window.addEventListener('mouseup', () => { 
-        isDragging = false; 
-        if(currentTool === 'pan') canvas.style.cursor = 'grab';
-    });
-
+    window.addEventListener('mouseup', () => { isDragging = false; if(currentTool === 'pan') canvas.style.cursor = 'grab'; });
     window.addEventListener('mousemove', e => {
         if(isDragging) {
             if(currentTool === 'pan') {
                 canvas.style.cursor = 'grabbing';
-                let dx = e.clientX - lastMouse.x;
-                let dy = e.clientY - lastMouse.y;
-                camera.x += dx; 
-                camera.y += dy;
+                camera.x += e.clientX - lastMouse.x; 
+                camera.y += e.clientY - lastMouse.y;
                 lastMouse = {x: e.clientX, y: e.clientY};
             } else {
                 applyTool(e.clientX, e.clientY);
             }
         }
     });
-
     canvas.addEventListener('wheel', e => {
         e.preventDefault();
-        let zoomFactor = 1.1;
-        if (e.deltaY > 0) camera.zoom /= zoomFactor;
-        else camera.zoom *= zoomFactor;
-        camera.zoom = Math.max(0.5, Math.min(camera.zoom, 20)); 
+        // Standard Zoom to Mouse Position
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+        
+        let newZoom = camera.zoom * zoomFactor;
+        newZoom = Math.max(0.1, Math.min(newZoom, 20));
+        
+        // formula: newCam = mouse - (mouse - oldCam) * (newZoom / oldZoom)
+        let scaleChange = newZoom / camera.zoom;
+        camera.x = mx - (mx - camera.x) * scaleChange;
+        camera.y = my - (my - camera.y) * scaleChange;
+        camera.zoom = newZoom;
     }, {passive:false});
 
-    // --- TOUCH EVENTS (Mobile Zoom/Pan Fix) ---
-    
-    function getTouchDist(e) {
+    // TOUCH HELPERS
+    const getTouchDist = (e) => {
         let t1 = e.touches[0], t2 = e.touches[1];
         let dx = t1.clientX - t2.clientX;
         let dy = t1.clientY - t2.clientY;
         return Math.sqrt(dx*dx + dy*dy);
-    }
-
-    function getTouchCenter(e) {
-        if(e.touches.length === 2) {
+    };
+    const getTouchCenter = (e) => {
+        if(e.touches.length >= 2) {
             return {
                 x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
                 y: (e.touches[0].clientY + e.touches[1].clientY) / 2
             };
         }
         return { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    }
+    };
 
+    // TOUCH EVENTS
     canvas.addEventListener('touchstart', e => {
+        if(e.target !== canvas) return;
         e.preventDefault();
         if(e.touches.length === 1) {
-            // Single touch: Pan tool OR Drawing
-            isDragging = true;
-            isPinching = false;
-            touchStart = {x: e.touches[0].clientX, y: e.touches[0].clientY};
+            isDragging = true; isPinching = false;
             lastMouse = {x: e.touches[0].clientX, y: e.touches[0].clientY};
-            if(currentTool !== 'pan') applyTool(touchStart.x, touchStart.y);
+            if(currentTool !== 'pan') applyTool(lastMouse.x, lastMouse.y);
         } else if (e.touches.length === 2) {
-            // Two fingers: Pinch Zoom + Pan
-            isPinching = true;
+            isPinching = true; isDragging = false;
             lastTouchDist = getTouchDist(e);
-            touchStart = getTouchCenter(e);
+            lastPinchCenter = getTouchCenter(e);
         }
     }, {passive: false});
 
     canvas.addEventListener('touchmove', e => {
+        if(e.target !== canvas) return;
         e.preventDefault();
+
         if(isPinching && e.touches.length === 2) {
-            // PINCH ZOOM
+            // 1. Calculate Scale
             let dist = getTouchDist(e);
+            let center = getTouchCenter(e);
             let zoomChange = dist / lastTouchDist;
             
-            camera.zoom *= zoomChange;
-            camera.zoom = Math.max(0.5, Math.min(camera.zoom, 20));
+            let newZoom = camera.zoom * zoomChange;
+            newZoom = Math.max(0.1, Math.min(newZoom, 20));
             
-            // TWO FINGER PAN
-            let center = getTouchCenter(e);
-            let dx = center.x - touchStart.x;
-            let dy = center.y - touchStart.y;
-            camera.x += dx;
-            camera.y += dy;
-            
+            // Re-calculate effective change after clamping
+            let effectiveChange = newZoom / camera.zoom; 
+            camera.zoom = newZoom;
+
+            // 2. Apply Zoom Centering & Pan
+            // Formula: NewCam = NewCenter - (OldCenter - OldCam) * effectiveChange
+            // This moves the point under 'lastPinchCenter' to 'center' while scaling.
+            camera.x = center.x - (lastPinchCenter.x - camera.x) * effectiveChange;
+            camera.y = center.y - (lastPinchCenter.y - camera.y) * effectiveChange;
+
             lastTouchDist = dist;
-            touchStart = center;
-            
-        } else if (!isPinching && isDragging && e.touches.length === 1) {
-            // SINGLE FINGER
-            let tx = e.touches[0].clientX;
-            let ty = e.touches[0].clientY;
-            
+            lastPinchCenter = center;
+
+        } else if (isDragging && e.touches.length === 1) {
+            let tx = e.touches[0].clientX, ty = e.touches[0].clientY;
             if(currentTool === 'pan') {
-                let dx = tx - lastMouse.x;
-                let dy = ty - lastMouse.y;
-                camera.x += dx; 
-                camera.y += dy;
+                camera.x += tx - lastMouse.x;
+                camera.y += ty - lastMouse.y;
             } else {
                 applyTool(tx, ty);
             }
@@ -511,41 +393,42 @@ function setupInput() {
         e.preventDefault();
         if(e.touches.length < 2) isPinching = false;
         if(e.touches.length === 0) isDragging = false;
+        // Reset last mouse if switching back to 1 finger
+        if(e.touches.length === 1) {
+             lastMouse = {x: e.touches[0].clientX, y: e.touches[0].clientY};
+             isDragging = true;
+        }
     });
 }
 
-function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-}
-
-function togglePanel() { document.getElementById('panel').classList.toggle('open'); }
-function togglePause() {
-    isPaused = !isPaused;
-    document.getElementById('btn-pause').innerText = isPaused ? "Resume" : "Pause";
-}
-
 function restartSim() {
-    // Apply Map Size
-    cols = CONF.mapSize;
-    rows = CONF.mapSize;
+    cols = CONF.mapSize; rows = CONF.mapSize;
     
-    // Center Camera
-    camera.x = -((cols * BASE_TILE_SIZE) - canvas.width) / 2;
-    camera.y = -((rows * BASE_TILE_SIZE) - canvas.height) / 2;
-    camera.zoom = 1.0;
-    if(window.innerWidth < 768) camera.zoom = 0.5; // Zoom out more on mobile initially
+    // --- AUTO FIT CAMERA ---
+    let worldW = cols * BASE_TILE_SIZE;
+    let worldH = rows * BASE_TILE_SIZE;
+    
+    // Calculate zoom to fit width (with margin)
+    if(window.innerWidth < 768) {
+        // Mobile: Fit to width, maybe slightly zoomed out to see borders
+        let targetZoom = (canvas.width * 0.9) / worldW;
+        camera.zoom = Math.max(0.2, Math.min(targetZoom, 3.0));
+    } else {
+        camera.zoom = 1.0;
+    }
+
+    // Center the map based on the calculated zoom
+    camera.x = (canvas.width - worldW * camera.zoom) / 2;
+    camera.y = (canvas.height - worldH * camera.zoom) / 2;
 
     SECTOR_SIZE = Math.ceil(CONF.visionRange); 
-    sCols = Math.ceil(cols / SECTOR_SIZE);
-    sRows = Math.ceil(rows / SECTOR_SIZE);
+    sCols = Math.ceil(cols / SECTOR_SIZE); sRows = Math.ceil(rows / SECTOR_SIZE);
 
     grid = {
         terrain: new Array(cols).fill(0).map(() => new Array(rows).fill(null)),
         entities: new Array(cols).fill(0).map(() => new Array(rows).fill(null))
     };
-    entities = [];
-    popHistory = [];
+    entities = []; popHistory = [];
     
     const total = cols * rows;
     spawnTerrain('rock', total * CONF.densityRock);
@@ -556,7 +439,6 @@ function restartSim() {
 
 function loop(timestamp) {
     requestAnimationFrame(loop);
-
     const fpsInterval = 1000 / CONF.simSpeed;
     const elapsed = timestamp - lastFrameTime;
 
@@ -570,10 +452,10 @@ function loop(timestamp) {
         lastFrameTime = timestamp - (elapsed % fpsInterval);
         if(!isPaused) update();
     }
-    
     draw();
 }
 
+// --- LOGIC & ENTITIES ---
 class Entity {
     constructor(x, y, type) {
         this.x = x; this.y = y; this.type = type; 
@@ -592,7 +474,6 @@ function spawnTerrain(type, count) {
         if(!grid.terrain[x][y] && !grid.entities[x][y]) grid.terrain[x][y] = type;
     }
 }
-
 function spawnEntity(type, count) {
     let spawned = 0, attempts = 0;
     while(spawned < count && attempts < count * 10) {
@@ -604,19 +485,16 @@ function spawnEntity(type, count) {
         attempts++;
     }
 }
-
 function update() {
     for(let i=0; i<CONF.foodSpawnRate; i++) {
         let x = rInt(cols), y = rInt(rows);
         if(!grid.terrain[x][y] && !grid.entities[x][y]) grid.terrain[x][y] = 'food';
     }
-
     if(entities.length > 0) {
         let alive = [];
         for(let e of entities) if(!e.dead) alive.push(e);
         entities = alive;
     }
-
     for (let i = entities.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [entities[i], entities[j]] = [entities[j], entities[i]];
@@ -644,7 +522,6 @@ function update() {
         if(e.stamina <= 0) { e.isSleeping = true; continue; }
         runAI(e);
     }
-
     document.getElementById('dispPrey').innerText = cPrey;
     document.getElementById('dispPred').innerText = cPred;
     updateGraph(cPrey, cPred);
@@ -786,11 +663,7 @@ function move(e, dest) {
     }
     else if(!tEnt) updatePos(e, dest.x, dest.y);
 }
-
-function updatePos(e, nx, ny) {
-    grid.entities[e.x][e.y] = null; e.x = nx; e.y = ny; grid.entities[nx][ny] = e;
-}
-
+function updatePos(e, nx, ny) { grid.entities[e.x][e.y] = null; e.x = nx; e.y = ny; grid.entities[nx][ny] = e; }
 function reproduce(e) {
     let idxs = [0,1,2,3,4,5,6,7];
     for (let i = idxs.length - 1; i > 0; i--) {
@@ -813,11 +686,85 @@ function reproduce(e) {
         }
     }
 }
-
 function die(e) { e.dead = true; if(grid.entities[e.x][e.y] === e) grid.entities[e.x][e.y] = null; }
 function rInt(n) { return Math.floor(Math.random()*n); }
 
-// --- RENDERING ---
+// --- RENDERING & ASSETS ---
+function generateSprites() {
+    const types = ['prey', 'predator'];
+    const states = ['idle', 'action', 'sleep'];
+    const drawFace = (ctx, color, type, state) => {
+        let size = 64, cx = 32, cy = 32;
+        ctx.beginPath(); ctx.fillStyle = color; ctx.arc(cx, cy, 28, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.arc(cx-10, cy-10, 10, 0, Math.PI*2); ctx.fill();
+        if(state === 'sleep') {
+            ctx.strokeStyle = '#333'; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(cx-15, cy); ctx.lineTo(cx-5, cy); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(cx+5, cy); ctx.lineTo(cx+15, cy); ctx.stroke();
+            ctx.fillStyle = '#fff'; ctx.font = 'bold 14px monospace'; ctx.fillText('z', cx+10, cy-15);
+        } else {
+            ctx.fillStyle = '#fff';
+            let eyeSize = (state === 'action' && type === 'prey') ? 10 : 8;
+            ctx.beginPath(); ctx.arc(cx-10, cy-5, eyeSize, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(cx+10, cy-5, eyeSize, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#000'; let pSize = 3;
+            ctx.beginPath(); ctx.arc(cx-10, cy-5, pSize, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(cx+10, cy-5, pSize, 0, Math.PI*2); ctx.fill();
+            if(type === 'predator') {
+                ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.moveTo(cx-18, cy-12); ctx.lineTo(cx-4, cy-8); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(cx+4, cy-8); ctx.lineTo(cx+18, cy-12); ctx.stroke();
+            }
+            ctx.beginPath(); ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
+            if(state === 'action' && type === 'prey') { ctx.arc(cx, cy+10, 6, 0, Math.PI*2); ctx.stroke(); } 
+            else if (type === 'predator') { ctx.moveTo(cx-8, cy+12); ctx.lineTo(cx+8, cy+12); ctx.stroke(); } 
+            else { ctx.arc(cx, cy+10, 8, 0, Math.PI, false); ctx.stroke(); }
+        }
+    };
+    types.forEach(t => {
+        states.forEach(s => {
+            let c = document.createElement('canvas'); c.width = 64; c.height = 64;
+            let x = c.getContext('2d');
+            let color = t === 'prey' ? '#00ccff' : '#ff2222';
+            if(s === 'action') color = t === 'prey' ? '#aaf' : '#ff0000';
+            drawFace(x, color, t, s);
+            spriteCache[`${t}_${s}`] = c;
+        });
+    });
+}
+
+function setupUI() {
+    const bind = (key, isPercentage = false) => {
+        const input = document.getElementById('in-' + key);
+        const label = document.getElementById('lbl-' + key);
+        let val = CONF[key];
+        if (isPercentage) val *= 100; 
+        input.value = parseFloat(val.toPrecision(6));
+        const updateLabel = () => label.innerText = input.value + (isPercentage ? '%' : '');
+        updateLabel();
+        input.oninput = () => {
+            updateLabel();
+            let newVal = parseFloat(input.value);
+            if (isPercentage) newVal /= 100;
+            CONF[key] = newVal;
+            if(key === 'visionRange') VISION_SQ = CONF.visionRange * CONF.visionRange;
+        };
+    };
+    bind('mapSize'); bind('simSpeed');
+    bind('densityPrey', true); bind('densityPred', true);
+    bind('preyMetabolism'); bind('preyBirthCost'); bind('preyGainFood');
+    bind('predMetabolism'); bind('predBirthCost'); bind('predHuntCost');
+    bind('foodSpawnRate');
+}
+function setTool(t) {
+    currentTool = t;
+    canvas.style.cursor = (t === 'pan') ? 'grab' : 'crosshair';
+    document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+    let btnId = 'tool-' + (t === 'predator' ? 'pred' : t);
+    document.getElementById(btnId).classList.add('active');
+}
+function togglePanel() { document.getElementById('panel').classList.toggle('open'); }
+function togglePause() { isPaused = !isPaused; document.getElementById('btn-pause').innerText = isPaused ? "Resume" : "Pause"; }
 
 function draw() {
     ctx.fillStyle = '#050505';
@@ -827,25 +774,22 @@ function draw() {
     ctx.translate(camera.x, camera.y);
     ctx.scale(camera.zoom, camera.zoom);
 
+    // Calculate Visible Area
     let startCol = Math.floor(-camera.x / (BASE_TILE_SIZE * camera.zoom));
     let startRow = Math.floor(-camera.y / (BASE_TILE_SIZE * camera.zoom));
     let viewCols = Math.ceil(canvas.width / (BASE_TILE_SIZE * camera.zoom));
     let viewRows = Math.ceil(canvas.height / (BASE_TILE_SIZE * camera.zoom));
 
     let pad = 2; 
-    let minX = startCol - pad;
-    let maxX = startCol + viewCols + pad;
-    let minY = startRow - pad;
-    let maxY = startRow + viewRows + pad;
-    
-    minX = Math.max(0, minX);
-    maxX = Math.min(cols, maxX);
-    minY = Math.max(0, minY);
-    maxY = Math.min(rows, maxY);
+    let minX = Math.max(0, startCol - pad);
+    let maxX = Math.min(cols, startCol + viewCols + pad);
+    let minY = Math.max(0, startRow - pad);
+    let maxY = Math.min(rows, startRow + viewRows + pad);
 
     let drawSize = BASE_TILE_SIZE;
     let useSprites = (drawSize * camera.zoom) > 12;
 
+    // Draw Map Background
     ctx.fillStyle = '#111';
     ctx.fillRect(0, 0, cols * BASE_TILE_SIZE, rows * BASE_TILE_SIZE);
 
@@ -869,21 +813,19 @@ function draw() {
                     let state = 'idle';
                     if(e.isSleeping) state = 'sleep';
                     else if(e.state === 'action') state = 'action';
-                    let spriteKey = `${e.type}_${state}`;
-                    let img = spriteCache[spriteKey];
+                    let img = spriteCache[`${e.type}_${state}`];
                     if(img) ctx.drawImage(img, px, py, drawSize, drawSize);
                 } else {
                     if(e.type==='prey') ctx.fillStyle = (e.state==='action') ? '#fff' : '#00ccff';
                     else ctx.fillStyle = (e.state==='action') ? '#ff0000' : '#550000';
                     ctx.fillRect(px, py, drawSize, drawSize);
-                    if(e.isSleeping) {
-                        ctx.fillStyle = '#ff0'; ctx.fillRect(px+drawSize/4, py+drawSize/4, drawSize/2, drawSize/2);
-                    }
+                    if(e.isSleeping) { ctx.fillStyle = '#ff0'; ctx.fillRect(px+drawSize/4, py+drawSize/4, drawSize/2, drawSize/2); }
                 }
             }
         }
     }
     
+    // Draw Map Border
     ctx.strokeStyle = '#444'; ctx.lineWidth = 2;
     ctx.strokeRect(0,0, cols*BASE_TILE_SIZE, rows*BASE_TILE_SIZE);
 
@@ -900,7 +842,6 @@ function updateGraph(preyCount, predCount) {
     const getY = (val) => h - ((val / maxVal) * (h - 10)) - 5; 
     const getX = (i) => (i / (MAX_HISTORY-1)) * w;
     if(popHistory.length < 2) return;
-
     const drawLine = (prop, color) => {
         graphCtx.beginPath(); graphCtx.strokeStyle = color; graphCtx.lineWidth = 2;
         graphCtx.moveTo(0, getY(popHistory[0][prop]));
