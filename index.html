@@ -96,12 +96,12 @@
             <div class="section">
                 <div class="section-title">World Settings</div>
                 <div class="control-group"><div class="control-label">Map Size <span class="val-display" id="lbl-mapSize"></span></div><input type="range" id="in-mapSize" min="100" max="600" step="50"></div>
-                <div class="control-group"><div class="control-label">Target FPS <span class="val-display" id="lbl-simSpeed"></span></div><input type="range" id="in-simSpeed" min="1" max="60" step="1"></div>
+                <div class="control-group"><div class="control-label">Target FPS <span class="val-display" id="lbl-simSpeed"></span></div><input type="range" id="in-simSpeed" min="1" max="120" step="1"></div>
             </div>
             <div class="section">
                 <div class="section-title">Initial Density</div>
                 <div class="control-group"><div class="control-label">Prey % <span class="val-display" id="lbl-densityPrey"></span></div><input type="range" id="in-densityPrey" min="0.05" max="1.0" step="0.05"></div>
-                <div class="control-group"><div class="control-label">Pred % <span class="val-display" id="lbl-densityPred"></span></div><input type="range" id="in-densityPred" min="0.005" max="0.05" step="0.005"></div>
+                <div class="control-group"><div class="control-label">Pred % <span class="val-display" id="lbl-densityPred"></span></div><input type="range" id="in-densityPred" min="0.000" max="0.05" step="0.005"></div>
             </div>
             <div class="section">
                 <div class="section-title">Prey Stats</div>
@@ -233,11 +233,14 @@ function setupWebGL() {
     atlasCanvas.width = spriteSize * count; atlasCanvas.height = spriteSize;
     const ctx = atlasCanvas.getContext('2d');
     
-    const drawFace = (dx, color, type, state) => {
+    const drawFace = (x, color, type, state) => {
+        let dx = x * 64;
         let cx = dx + 32, cy = 32;
+        ctx.save(); // Clip so glow/shadows don't bleed into adjacent sprites
+        ctx.beginPath(); ctx.rect(dx, 0, 63, 64); ctx.clip();
         ctx.clearRect(dx, 0, 64, 64);
-        if(type === 'rock') { ctx.fillStyle = '#222'; ctx.fillRect(dx,0,64,64); ctx.fillStyle = '#333'; ctx.fillRect(dx+2,2,60,60); return; }
-        if(type === 'food') { ctx.shadowBlur = 10; ctx.shadowColor = '#00ff00'; ctx.fillStyle = '#00aa00'; ctx.beginPath(); ctx.arc(cx,cy,24,0,Math.PI*2); ctx.fill(); ctx.shadowBlur = 0; return; }
+        if(type === 'rock') { ctx.fillStyle = '#222'; ctx.fillRect(dx,0,64,64); ctx.fillStyle = '#333'; ctx.fillRect(dx+2,2,60,60); ctx.restore(); return; }
+        if(type === 'food') { ctx.shadowBlur = 10; ctx.shadowColor = '#00ff00'; ctx.fillStyle = '#00aa00'; ctx.beginPath(); ctx.arc(cx,cy,24,0,Math.PI*2); ctx.fill(); ctx.shadowBlur = 0; ctx.restore(); return; }
         ctx.shadowBlur = 5; ctx.shadowColor = color; ctx.beginPath(); ctx.fillStyle = color; ctx.arc(cx, cy, 28, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0;
         ctx.beginPath(); ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.arc(cx-10, cy-10, 10, 0, Math.PI*2); ctx.fill();
         if(state === 'sleep') {
@@ -253,10 +256,11 @@ function setupWebGL() {
             if(type==='predator') { ctx.moveTo(cx-18,cy-12); ctx.lineTo(cx-4,cy-8); ctx.stroke(); ctx.beginPath(); ctx.moveTo(cx+4,cy-8); ctx.lineTo(cx+18,cy-12); ctx.stroke(); }
             ctx.beginPath(); if(state==='action' && type==='prey') { ctx.arc(cx,cy+12,6,0,Math.PI*2); ctx.stroke(); } else if(type==='predator') { ctx.moveTo(cx-10,cy+14); ctx.lineTo(cx+10,cy+14); ctx.stroke(); } else { ctx.arc(cx,cy+12,8,0,Math.PI,false); ctx.stroke(); }
         }
+        ctx.restore();
     };
-    drawFace(0, null, 'rock'); drawFace(64, null, 'food');
-    drawFace(128, '#00ccff', 'prey', 'idle'); drawFace(192, '#aaaaff', 'prey', 'action'); drawFace(256, '#00ccff', 'prey', 'sleep');
-    drawFace(320, '#ff2222', 'predator', 'idle'); drawFace(384, '#ff5555', 'predator', 'action'); drawFace(448, '#ff2222', 'predator', 'sleep');
+    drawFace(0, null, 'rock'); drawFace(1, null, 'food');
+    drawFace(2, '#00ccff', 'prey', 'idle'); drawFace(3, '#aaaaff', 'prey', 'action'); drawFace(4, '#00ccff', 'prey', 'sleep');
+    drawFace(5, '#ff2222', 'predator', 'idle'); drawFace(6, '#ff5555', 'predator', 'action'); drawFace(7, '#ff2222', 'predator', 'sleep');
 
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
