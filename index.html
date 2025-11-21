@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>EcoSim Mobile Optimized</title>
+    <title>EcoSim WebGL</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #050505; font-family: 'Segoe UI', Roboto, monospace; color: #ccc; touch-action: none; }
         canvas { display: block; touch-action: none; }
@@ -28,6 +28,7 @@
             display: flex; gap: 5px; padding: 5px; z-index: 60;
             box-shadow: 0 4px 15px rgba(0,0,0,0.6);
             white-space: nowrap;
+            justify-content: center; /* Center on desktop */
         }
         .tool-btn {
             width: 40px; height: 40px; border: 1px solid transparent; background: #333;
@@ -67,7 +68,7 @@
                 width: 95%;
                 bottom: 15px;
                 overflow-x: auto;
-                justify-content: flex-start;
+                justify-content: flex-start; /* Align start for scroll */
                 -webkit-overflow-scrolling: touch;
             }
             .tool-btn {
@@ -101,90 +102,79 @@
     <button id="controls-btn" onclick="togglePanel()">Settings</button>
 
     <div id="panel">
-        <div class="header">
-            <h2>Parameters</h2>
-            <button class="close-btn" onclick="togglePanel()">×</button>
-        </div>
+        <div class="header"><h2>Parameters</h2><button class="close-btn" onclick="togglePanel()">×</button></div>
         <div class="content">
             <div class="section">
                 <div class="section-title">World Settings</div>
-                <div class="control-group">
-                    <div class="control-label">Map Size <span class="val-display" id="lbl-mapSize"></span></div>
-                    <input type="range" id="in-mapSize" min="100" max="600" step="50">
-                </div>
-                <div class="control-group">
-                    <div class="control-label">Target FPS <span class="val-display" id="lbl-simSpeed"></span></div>
-                    <input type="range" id="in-simSpeed" min="1" max="120" step="1">
-                </div>
+                <div class="control-group"><div class="control-label">Map Size <span class="val-display" id="lbl-mapSize"></span></div><input type="range" id="in-mapSize" min="100" max="600" step="50"></div>
+                <div class="control-group"><div class="control-label">Target FPS <span class="val-display" id="lbl-simSpeed"></span></div><input type="range" id="in-simSpeed" min="1" max="60" step="1"></div>
             </div>
-            <!-- Sim Parameters -->
             <div class="section">
                 <div class="section-title">Initial Density</div>
-                <div class="control-group">
-                    <div class="control-label">Prey % <span class="val-display" id="lbl-densityPrey"></span></div>
-                    <input type="range" id="in-densityPrey" min="0.05" max="1.0" step="0.05">
-                </div>
-                <div class="control-group">
-                    <div class="control-label">Pred % <span class="val-display" id="lbl-densityPred"></span></div>
-                    <input type="range" id="in-densityPred" min="0.005" max="0.05" step="0.005">
-                </div>
+                <div class="control-group"><div class="control-label">Prey % <span class="val-display" id="lbl-densityPrey"></span></div><input type="range" id="in-densityPrey" min="0.05" max="1.0" step="0.05"></div>
+                <div class="control-group"><div class="control-label">Pred % <span class="val-display" id="lbl-densityPred"></span></div><input type="range" id="in-densityPred" min="0.005" max="0.05" step="0.005"></div>
             </div>
             <div class="section">
                 <div class="section-title">Prey Stats</div>
-                <div class="control-group">
-                    <div class="control-label">Metabolism <span class="val-display" id="lbl-preyMetabolism"></span></div>
-                    <input type="range" id="in-preyMetabolism" min="0.01" max="0.5" step="0.01">
-                </div>
-                <div class="control-group">
-                    <div class="control-label">Birth Cost <span class="val-display" id="lbl-preyBirthCost"></span></div>
-                    <input type="range" id="in-preyBirthCost" min="10" max="150" step="5">
-                </div>
-                <div class="control-group">
-                    <div class="control-label">Food Gain <span class="val-display" id="lbl-preyGainFood"></span></div>
-                    <input type="range" id="in-preyGainFood" min="5" max="100" step="5">
-                </div>
+                <div class="control-group"><div class="control-label">Metabolism <span class="val-display" id="lbl-preyMetabolism"></span></div><input type="range" id="in-preyMetabolism" min="0.01" max="0.5" step="0.01"></div>
+                <div class="control-group"><div class="control-label">Birth Cost <span class="val-display" id="lbl-preyBirthCost"></span></div><input type="range" id="in-preyBirthCost" min="10" max="150" step="5"></div>
+                <div class="control-group"><div class="control-label">Food Gain <span class="val-display" id="lbl-preyGainFood"></span></div><input type="range" id="in-preyGainFood" min="5" max="100" step="5"></div>
             </div>
             <div class="section">
                 <div class="section-title">Predator Stats</div>
-                <div class="control-group">
-                    <div class="control-label">Metabolism <span class="val-display" id="lbl-predMetabolism"></span></div>
-                    <input type="range" id="in-predMetabolism" min="0.1" max="1.5" step="0.05">
-                </div>
-                <div class="control-group">
-                    <div class="control-label">Birth Cost <span class="val-display" id="lbl-predBirthCost"></span></div>
-                    <input type="range" id="in-predBirthCost" min="100" max="400" step="10">
-                </div>
-                <div class="control-group">
-                    <div class="control-label">Hunt Fatigue <span class="val-display" id="lbl-predHuntCost"></span></div>
-                    <input type="range" id="in-predHuntCost" min="0" max="10" step="1">
-                </div>
+                <div class="control-group"><div class="control-label">Metabolism <span class="val-display" id="lbl-predMetabolism"></span></div><input type="range" id="in-predMetabolism" min="0.1" max="1.5" step="0.05"></div>
+                <div class="control-group"><div class="control-label">Birth Cost <span class="val-display" id="lbl-predBirthCost"></span></div><input type="range" id="in-predBirthCost" min="100" max="400" step="10"></div>
+                <div class="control-group"><div class="control-label">Hunt Fatigue <span class="val-display" id="lbl-predHuntCost"></span></div><input type="range" id="in-predHuntCost" min="0" max="10" step="1"></div>
             </div>
             <div class="section">
                 <div class="section-title">Environment</div>
-                <div class="control-group">
-                    <div class="control-label">Food Spawn <span class="val-display" id="lbl-foodSpawnRate"></span></div>
-                    <input type="range" id="in-foodSpawnRate" min="1" max="100" step="1">
-                </div>
+                <div class="control-group"><div class="control-label">Food Spawn <span class="val-display" id="lbl-foodSpawnRate"></span></div><input type="range" id="in-foodSpawnRate" min="1" max="100" step="1"></div>
             </div>
-            <div class="btn-row">
-                <button class="action-btn btn-gray" id="btn-pause" onclick="togglePause()">Pause</button>
-                <button class="action-btn btn-blue" onclick="restartSim()">Apply & Restart</button>
-            </div>
+            <div class="btn-row"><button class="action-btn btn-gray" id="btn-pause" onclick="togglePause()">Pause</button><button class="action-btn btn-blue" onclick="restartSim()">Apply & Restart</button></div>
         </div>
     </div>
 
     <canvas id="simCanvas"></canvas>
 
 <script>
+// --- WEBGL SHADERS ---
+const VS_SOURCE = `#version 300 es
+layout(location=0) in vec2 a_pos;      // Quad vertex (0,0 to 1,1)
+layout(location=1) in vec4 a_instance; // x, y, size, typeIndex
+uniform mat3 u_matrix;                 // Projection * View
+uniform vec2 u_atlasSize;              // Size of texture atlas (e.g. 512, 64)
+out vec2 v_texCoord;
+void main() {
+    vec2 worldPos = a_instance.xy + (a_pos * a_instance.z);
+    vec3 finalPos = u_matrix * vec3(worldPos, 1.0);
+    gl_Position = vec4(finalPos.xy, 0.0, 1.0);
+    
+    // Sprite calculation: We assume 64x64 sprites stacked horizontally
+    float spriteIdx = a_instance.w;
+    float spriteSize = 64.0;
+    float u = (spriteIdx * spriteSize + a_pos.x * spriteSize) / u_atlasSize.x;
+    float v = (a_pos.y * spriteSize) / u_atlasSize.y;
+    v_texCoord = vec2(u, v);
+}`;
+
+const FS_SOURCE = `#version 300 es
+precision mediump float;
+in vec2 v_texCoord;
+uniform sampler2D u_texture;
+out vec4 outColor;
+void main() {
+    vec4 color = texture(u_texture, v_texCoord);
+    if (color.a < 0.1) discard;
+    outColor = color;
+}`;
+
+// --- CONFIG ---
 const DEFAULT_CONF = {
-    mapSize: 300,
-    simSpeed: 30,
+    mapSize: 300, simSpeed: 30,
     densityPrey: 0.001, densityPred: 0.0001, 
     preyMetabolism: 0.18, preyBirthCost: 90, preyGainFood: 10,       
     predMetabolism: 0.40, predBirthCost: 390, predHuntCost: 5,        
-    foodSpawnRate: 20,       
-    densityRock: 0.08,
-    visionRange: 60,
+    foodSpawnRate: 20, densityRock: 0.08, visionRange: 60,
     preyLife: 600, preyEnergyMax: 120, preyBirthThresh: 0.80,
     predLife: 500, predEnergyMax: 400, predBirthThresh: 0.95,
     predReproCooldown: 300, predGainPrey: 120,
@@ -192,41 +182,33 @@ const DEFAULT_CONF = {
 
 let CONF = { ...DEFAULT_CONF };
 let VISION_SQ = CONF.visionRange * CONF.visionRange;
-
 const BASE_TILE_SIZE = 5; 
-let grid, cols, rows;
-let entities = [];
-let isPaused = false;
-
-let sectors = [], sCols, sRows; 
-let SECTOR_SIZE;
-
+let grid, cols, rows, entities = [], isPaused = false;
+let sectors = [], sCols, sRows, SECTOR_SIZE;
 let camera = { x: 0, y: 0, zoom: 1 };
-let isDragging = false;
-let lastMouse = { x: 0, y: 0 };
-let currentTool = 'pan'; 
-
-// --- TOUCH STATE ---
-let lastTouchDist = 0;
-let isPinching = false;
-let lastPinchCenter = {x:0, y:0};
-
-let spriteCache = {}; 
-let lastTime = 0, frameCount = 0, fpsTimer = 0;
-let lastFrameTime = 0; 
+let isDragging = false, lastMouse = { x: 0, y: 0 }, currentTool = 'pan'; 
+let lastTouchDist = 0, isPinching = false, lastPinchCenter = {x:0, y:0};
+let lastTime = 0, frameCount = 0, fpsTimer = 0, lastFrameTime = 0; 
 let popHistory = [], MAX_HISTORY = 300; 
-let canvas, ctx, graphCanvas, graphCtx;
+let canvas, gl, graphCanvas, graphCtx;
+let glState = {}; // Holds WebGL programs, buffers, etc.
+
+// Sprite mappings for Atlas
+const SID = { ROCK:0, FOOD:1, PREY:2, PREY_ACT:3, PREY_SLP:4, PRED:5, PRED_ACT:6, PRED_SLP:7 };
 
 window.onload = () => {
     canvas = document.getElementById('simCanvas');
-    ctx = canvas.getContext('2d', { alpha: false });
+    // Init WebGL
+    gl = canvas.getContext('webgl2', { alpha: false, antialias: false });
+    if(!gl) { alert("WebGL2 not supported"); return; }
+    
     graphCanvas = document.getElementById('graphCanvas');
     graphCtx = graphCanvas.getContext('2d');
 
-    generateSprites();
+    setupWebGL();
     setupUI();
     setupInput();
-    window.addEventListener('resize', () => { resizeCanvas(); });
+    window.addEventListener('resize', resizeCanvas);
     resizeCanvas(); 
     restartSim();   
     loop(0);
@@ -235,618 +217,455 @@ window.onload = () => {
 function resizeCanvas() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
+    gl.viewport(0, 0, canvas.width, canvas.height);
 }
 
-// --- INPUT HANDLING ---
+// --- WEBGL SETUP ---
+function setupWebGL() {
+    // 1. Create Shader Program
+    const createShader = (type, src) => {
+        const s = gl.createShader(type);
+        gl.shaderSource(s, src); gl.compileShader(s);
+        if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)) console.error(gl.getShaderInfoLog(s));
+        return s;
+    };
+    const program = gl.createProgram();
+    gl.attachShader(program, createShader(gl.VERTEX_SHADER, VS_SOURCE));
+    gl.attachShader(program, createShader(gl.FRAGMENT_SHADER, FS_SOURCE));
+    gl.linkProgram(program);
+    if(!gl.getProgramParameter(program, gl.LINK_STATUS)) console.error(gl.getProgramInfoLog(program));
+    gl.useProgram(program);
+    glState.program = program;
 
+    // 2. Generate Texture Atlas
+    const atlasCanvas = document.createElement('canvas');
+    const spriteSize = 64;
+    const count = 8; 
+    atlasCanvas.width = spriteSize * count;
+    atlasCanvas.height = spriteSize;
+    const ctx = atlasCanvas.getContext('2d');
+    
+    const drawFace = (dx, color, type, state) => {
+        let cx = dx + 32, cy = 32;
+        // Rock/Food simple shapes
+        if(type === 'rock') { 
+            ctx.fillStyle = '#222'; ctx.fillRect(dx,0,64,64); 
+            ctx.fillStyle = '#333'; ctx.fillRect(dx+4,4,56,56); return; 
+        }
+        if(type === 'food') {
+            ctx.fillStyle = '#004400'; ctx.beginPath(); ctx.arc(cx,cy,24,0,Math.PI*2); ctx.fill(); return;
+        }
+        // Entities
+        ctx.beginPath(); ctx.fillStyle = color; ctx.arc(cx, cy, 28, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.arc(cx-10, cy-10, 10, 0, Math.PI*2); ctx.fill();
+        if(state === 'sleep') {
+            ctx.strokeStyle='#333'; ctx.lineWidth=3; 
+            ctx.beginPath(); ctx.moveTo(cx-15,cy); ctx.lineTo(cx-5,cy); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(cx+5,cy); ctx.lineTo(cx+15,cy); ctx.stroke();
+            ctx.fillStyle='#fff'; ctx.font='bold 14px monospace'; ctx.fillText('z', cx+10, cy-15);
+        } else {
+            ctx.fillStyle='#fff'; 
+            let es = (state === 'action' && type === 'prey') ? 10 : 8;
+            ctx.beginPath(); ctx.arc(cx-10, cy-5, es, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(cx+10, cy-5, es, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle='#000'; 
+            ctx.beginPath(); ctx.arc(cx-10, cy-5, 3, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(cx+10, cy-5, 3, 0, Math.PI*2); ctx.fill();
+            if(type === 'predator') {
+                ctx.strokeStyle='#000'; ctx.lineWidth=3;
+                ctx.beginPath(); ctx.moveTo(cx-18,cy-12); ctx.lineTo(cx-4,cy-8); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(cx+4,cy-8); ctx.lineTo(cx+18,cy-12); ctx.stroke();
+            }
+            ctx.beginPath(); ctx.strokeStyle='#000'; ctx.lineWidth=2;
+            if(state==='action' && type==='prey') { ctx.arc(cx,cy+10,6,0,Math.PI*2); ctx.stroke(); }
+            else if(type==='predator') { ctx.moveTo(cx-8,cy+12); ctx.lineTo(cx+8,cy+12); ctx.stroke(); }
+            else { ctx.arc(cx,cy+10,8,0,Math.PI,false); ctx.stroke(); }
+        }
+    };
+    // Draw sprites to atlas
+    drawFace(0, null, 'rock');
+    drawFace(64, null, 'food');
+    drawFace(128, '#00ccff', 'prey', 'idle');
+    drawFace(192, '#aaf', 'prey', 'action');
+    drawFace(256, '#00ccff', 'prey', 'sleep');
+    drawFace(320, '#ff2222', 'predator', 'idle');
+    drawFace(384, '#ff0000', 'predator', 'action');
+    drawFace(448, '#ff2222', 'predator', 'sleep');
+
+    // Upload Texture
+    const texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, atlasCanvas);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    
+    gl.uniform1i(gl.getUniformLocation(program, 'u_texture'), 0);
+    gl.uniform2f(gl.getUniformLocation(program, 'u_atlasSize'), atlasCanvas.width, atlasCanvas.height);
+
+    // 3. Geometry (Instanced Quad)
+    const vao = gl.createVertexArray();
+    gl.bindVertexArray(vao);
+
+    // Positions (0,0 to 1,1)
+    const posBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0,0, 1,0, 0,1, 1,0, 1,1, 0,1]), gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(0);
+    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+
+    // Instances (Dynamic)
+    const instanceBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, instanceBuffer);
+    // Allocate a big buffer (e.g. 100k instances * 4 floats * 4 bytes) ~ 1.6MB
+    gl.bufferData(gl.ARRAY_BUFFER, 100000 * 16, gl.DYNAMIC_DRAW); 
+    
+    gl.enableVertexAttribArray(1);
+    gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 16, 0); // x, y, size, type
+    gl.vertexAttribDivisor(1, 1); // Advance once per instance
+
+    glState.vao = vao;
+    glState.instanceBuffer = instanceBuffer;
+    glState.instanceData = new Float32Array(100000 * 4);
+    glState.locMatrix = gl.getUniformLocation(program, 'u_matrix');
+}
+
+// --- INPUT & UI ---
 function setupInput() {
     const getGridPos = (cx, cy) => {
         const rect = canvas.getBoundingClientRect();
-        const mx = cx - rect.left;
-        const my = cy - rect.top;
-        const wx = (mx - camera.x) / camera.zoom;
-        const wy = (my - camera.y) / camera.zoom;
+        const mx = cx - rect.left, my = cy - rect.top;
+        const wx = (mx - camera.x) / camera.zoom, wy = (my - camera.y) / camera.zoom;
         return { x: Math.floor(wx / BASE_TILE_SIZE), y: Math.floor(wy / BASE_TILE_SIZE) };
     }
-
     const applyTool = (cx, cy) => {
         const p = getGridPos(cx, cy);
         if(p.x < 0 || p.x >= cols || p.y < 0 || p.y >= rows) return;
         if(currentTool === 'pan') return;
-
         if(currentTool === 'erase') {
-            if(grid.entities[p.x][p.y]) {
-                grid.entities[p.x][p.y].dead = true;
-                grid.entities[p.x][p.y] = null;
-            }
-            grid.terrain[p.x][p.y] = null;
-            return;
+            if(grid.entities[p.x][p.y]) { grid.entities[p.x][p.y].dead = true; grid.entities[p.x][p.y] = null; }
+            grid.terrain[p.x][p.y] = null; return;
         }
         if (grid.terrain[p.x][p.y] === 'rock' && (currentTool === 'prey' || currentTool === 'predator' || currentTool === 'food')) return; 
-        
         if(currentTool === 'rock' || currentTool === 'food') {
-             if(grid.entities[p.x][p.y]) {
-                 grid.entities[p.x][p.y].dead = true;
-                 grid.entities[p.x][p.y] = null;
-             }
-             grid.terrain[p.x][p.y] = currentTool;
-             return;
+             if(grid.entities[p.x][p.y]) { grid.entities[p.x][p.y].dead = true; grid.entities[p.x][p.y] = null; }
+             grid.terrain[p.x][p.y] = currentTool; return;
         }
         if((currentTool === 'prey' || currentTool === 'predator') && !grid.entities[p.x][p.y]) {
-            let ent = new Entity(p.x, p.y, currentTool);
-            entities.push(ent);
-            grid.entities[p.x][p.y] = ent;
+            let ent = new Entity(p.x, p.y, currentTool); entities.push(ent); grid.entities[p.x][p.y] = ent;
         }
     }
-
-    // MOUSE
-    canvas.addEventListener('mousedown', e => { 
-        isDragging = true; 
-        lastMouse = {x: e.clientX, y: e.clientY}; 
-        applyTool(e.clientX, e.clientY);
-    });
+    canvas.addEventListener('mousedown', e => { isDragging = true; lastMouse = {x: e.clientX, y: e.clientY}; applyTool(e.clientX, e.clientY); });
     window.addEventListener('mouseup', () => { isDragging = false; if(currentTool === 'pan') canvas.style.cursor = 'grab'; });
     window.addEventListener('mousemove', e => {
         if(isDragging) {
             if(currentTool === 'pan') {
                 canvas.style.cursor = 'grabbing';
-                camera.x += e.clientX - lastMouse.x; 
-                camera.y += e.clientY - lastMouse.y;
+                camera.x += e.clientX - lastMouse.x; camera.y += e.clientY - lastMouse.y;
                 lastMouse = {x: e.clientX, y: e.clientY};
-            } else {
-                applyTool(e.clientX, e.clientY);
-            }
+            } else applyTool(e.clientX, e.clientY);
         }
     });
     canvas.addEventListener('wheel', e => {
         e.preventDefault();
         const rect = canvas.getBoundingClientRect();
-        const mx = e.clientX - rect.left;
-        const my = e.clientY - rect.top;
-        const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
-        let newZoom = camera.zoom * zoomFactor;
-        newZoom = Math.max(0.1, Math.min(newZoom, 20));
+        const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+        let newZoom = Math.max(0.1, Math.min(camera.zoom * (e.deltaY > 0 ? 0.9 : 1.1), 20));
         let scaleChange = newZoom / camera.zoom;
-        camera.x = mx - (mx - camera.x) * scaleChange;
-        camera.y = my - (my - camera.y) * scaleChange;
+        camera.x = mx - (mx - camera.x) * scaleChange; camera.y = my - (my - camera.y) * scaleChange;
         camera.zoom = newZoom;
     }, {passive:false});
 
-    // TOUCH HELPERS
-    const getTouchDist = (e) => {
-        let t1 = e.touches[0], t2 = e.touches[1];
-        let dx = t1.clientX - t2.clientX;
-        let dy = t1.clientY - t2.clientY;
-        return Math.sqrt(dx*dx + dy*dy);
-    };
-    const getTouchCenter = (e) => {
-        if(e.touches.length >= 2) {
-            return {
-                x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
-                y: (e.touches[0].clientY + e.touches[1].clientY) / 2
-            };
-        }
-        return { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    };
+    const getTouchDist = (e) => Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+    const getTouchCenter = (e) => e.touches.length >= 2 ? {x: (e.touches[0].clientX+e.touches[1].clientX)/2, y: (e.touches[0].clientY+e.touches[1].clientY)/2} : {x:0,y:0};
 
-    // TOUCH EVENTS
     canvas.addEventListener('touchstart', e => {
-        if(e.target !== canvas) return;
-        e.preventDefault();
-        if(e.touches.length === 1) {
-            isDragging = true; isPinching = false;
-            lastMouse = {x: e.touches[0].clientX, y: e.touches[0].clientY};
-            if(currentTool !== 'pan') applyTool(lastMouse.x, lastMouse.y);
-        } else if (e.touches.length === 2) {
-            isPinching = true; isDragging = false;
-            lastTouchDist = getTouchDist(e);
-            lastPinchCenter = getTouchCenter(e);
-        }
+        if(e.target !== canvas) return; e.preventDefault();
+        if(e.touches.length === 1) { isDragging = true; isPinching = false; lastMouse = {x: e.touches[0].clientX, y: e.touches[0].clientY}; if(currentTool !== 'pan') applyTool(lastMouse.x, lastMouse.y); }
+        else if (e.touches.length === 2) { isPinching = true; isDragging = false; lastTouchDist = getTouchDist(e); lastPinchCenter = getTouchCenter(e); }
     }, {passive: false});
-
     canvas.addEventListener('touchmove', e => {
-        if(e.target !== canvas) return;
-        e.preventDefault();
-
+        if(e.target !== canvas) return; e.preventDefault();
         if(isPinching && e.touches.length === 2) {
-            let dist = getTouchDist(e);
-            let center = getTouchCenter(e);
-            let zoomChange = dist / lastTouchDist;
-            let newZoom = camera.zoom * zoomChange;
-            newZoom = Math.max(0.1, Math.min(newZoom, 20));
-            let effectiveChange = newZoom / camera.zoom; 
-            camera.zoom = newZoom;
+            let dist = getTouchDist(e), center = getTouchCenter(e);
+            let newZoom = Math.max(0.1, Math.min(camera.zoom * (dist / lastTouchDist), 20));
+            let effectiveChange = newZoom / camera.zoom; camera.zoom = newZoom;
             camera.x = center.x - (lastPinchCenter.x - camera.x) * effectiveChange;
             camera.y = center.y - (lastPinchCenter.y - camera.y) * effectiveChange;
-            lastTouchDist = dist;
-            lastPinchCenter = center;
-
+            lastTouchDist = dist; lastPinchCenter = center;
         } else if (isDragging && e.touches.length === 1) {
             let tx = e.touches[0].clientX, ty = e.touches[0].clientY;
-            if(currentTool === 'pan') {
-                camera.x += tx - lastMouse.x;
-                camera.y += ty - lastMouse.y;
-            } else {
-                applyTool(tx, ty);
-            }
+            if(currentTool === 'pan') { camera.x += tx - lastMouse.x; camera.y += ty - lastMouse.y; } else applyTool(tx, ty);
             lastMouse = {x: tx, y: ty};
         }
     }, {passive: false});
-
-    canvas.addEventListener('touchend', e => {
-        e.preventDefault();
-        if(e.touches.length < 2) isPinching = false;
-        if(e.touches.length === 0) isDragging = false;
-        if(e.touches.length === 1) {
-             lastMouse = {x: e.touches[0].clientX, y: e.touches[0].clientY};
-             isDragging = true;
-        }
-    });
-}
-
-function restartSim() {
-    cols = CONF.mapSize; rows = CONF.mapSize;
-    
-    let worldW = cols * BASE_TILE_SIZE;
-    let worldH = rows * BASE_TILE_SIZE;
-    
-    if(window.innerWidth < 768) {
-        let targetZoom = (canvas.width * 0.9) / worldW;
-        camera.zoom = Math.max(0.2, Math.min(targetZoom, 3.0));
-    } else {
-        camera.zoom = 1.0;
-    }
-
-    camera.x = (canvas.width - worldW * camera.zoom) / 2;
-    camera.y = (canvas.height - worldH * camera.zoom) / 2;
-
-    SECTOR_SIZE = Math.ceil(CONF.visionRange); 
-    sCols = Math.ceil(cols / SECTOR_SIZE); sRows = Math.ceil(rows / SECTOR_SIZE);
-
-    grid = {
-        terrain: new Array(cols).fill(0).map(() => new Array(rows).fill(null)),
-        entities: new Array(cols).fill(0).map(() => new Array(rows).fill(null))
-    };
-    entities = []; popHistory = [];
-    
-    const total = cols * rows;
-    spawnTerrain('rock', total * CONF.densityRock);
-    spawnTerrain('food', total * 0.15);
-    spawnEntity('prey', Math.max(1, Math.floor(total * CONF.densityPrey)));
-    spawnEntity('predator', Math.max(1, Math.floor(total * CONF.densityPred)));
-}
-
-function loop(timestamp) {
-    requestAnimationFrame(loop);
-    
-    if (!lastTime) { lastTime = timestamp; return; }
-    const dt = timestamp - lastTime;
-    lastTime = timestamp;
-    fpsTimer += dt;
-
-    // FPS Display Update
-    if (fpsTimer >= 1000) {
-        document.getElementById('dispFps').innerText = frameCount;
-        frameCount = 0;
-        fpsTimer -= 1000; // Keep remainder for accuracy
-    }
-
-    const fpsInterval = 1000 / CONF.simSpeed;
-    const elapsed = timestamp - lastFrameTime;
-
-    // Performance: Only render/update at target FPS, 
-    // UNLESS interacting (smooth scrolling)
-    const interacting = isDragging || isPinching;
-
-    if (elapsed > fpsInterval || interacting) {
-        // If we are just interacting, we don't advance physics, only time
-        // If elapsed > interval, we advance physics
-        
-        if (elapsed > fpsInterval) {
-            lastFrameTime = timestamp - (elapsed % fpsInterval);
-            if(!isPaused) update();
-        }
-        
-        // Always draw if we updated OR if we are moving camera
-        draw();
-        frameCount++;
-    }
-}
-
-// --- LOGIC & ENTITIES ---
-class Entity {
-    constructor(x, y, type) {
-        this.x = x; this.y = y; this.type = type; 
-        this.dead = false; this.age = 0;
-        this.maxAge = (type === 'prey') ? CONF.preyLife : CONF.predLife;
-        this.energy = (type === 'prey') ? 60 : 250;
-        this.maxEnergy = (type === 'prey') ? CONF.preyEnergyMax : CONF.predEnergyMax;
-        this.stamina = 100; this.isSleeping = false; this.sleepTimer = 0; this.reproTimer = 0; 
-        this.state = 'idle'; 
-    }
-}
-
-function spawnTerrain(type, count) {
-    for(let i=0; i<count; i++) {
-        let x = rInt(cols), y = rInt(rows);
-        if(!grid.terrain[x][y] && !grid.entities[x][y]) grid.terrain[x][y] = type;
-    }
-}
-function spawnEntity(type, count) {
-    let spawned = 0, attempts = 0;
-    while(spawned < count && attempts < count * 10) {
-        let x = rInt(cols), y = rInt(rows);
-        if(grid.terrain[x][y] !== 'rock' && !grid.entities[x][y]) {
-            let e = new Entity(x, y, type);
-            grid.entities[x][y] = e; entities.push(e); spawned++;
-        }
-        attempts++;
-    }
-}
-function update() {
-    for(let i=0; i<CONF.foodSpawnRate; i++) {
-        let x = rInt(cols), y = rInt(rows);
-        if(!grid.terrain[x][y] && !grid.entities[x][y]) grid.terrain[x][y] = 'food';
-    }
-    if(entities.length > 0) {
-        let alive = [];
-        for(let e of entities) if(!e.dead) alive.push(e);
-        entities = alive;
-    }
-    for (let i = entities.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [entities[i], entities[j]] = [entities[j], entities[i]];
-    }
-    
-    sectors = new Array(sCols * sRows).fill(null).map(()=>[]);
-    for(let e of entities) {
-        let sx = Math.floor(e.x / SECTOR_SIZE), sy = Math.floor(e.y / SECTOR_SIZE);
-        if(sx >= 0 && sx < sCols && sy >= 0 && sy < sRows) sectors[sy * sCols + sx].push(e);
-    }
-
-    let cPrey = 0, cPred = 0;
-    for (let e of entities) {
-        if(e.dead) continue;
-        if(e.type === 'prey') cPrey++; else cPred++;
-        e.age++;
-        e.energy -= (e.type === 'predator') ? CONF.predMetabolism : CONF.preyMetabolism;
-        if(e.reproTimer > 0) e.reproTimer--;
-        if(e.energy <= 0 || e.age >= e.maxAge) { die(e); continue; }
-        if(e.isSleeping) {
-            e.stamina += 5; e.sleepTimer--;
-            if(e.sleepTimer <= 0 && e.stamina >= 100) { e.isSleeping = false; e.stamina = 100; }
-            continue;
-        }
-        if(e.stamina <= 0) { e.isSleeping = true; continue; }
-        runAI(e);
-    }
-    document.getElementById('dispPrey').innerText = cPrey;
-    document.getElementById('dispPred').innerText = cPred;
-    updateGraph(cPrey, cPred);
-}
-
-function runAI(e) {
-    let nearest = getNearestNeighbor(e); 
-    if(e.type === 'prey') {
-        if(nearest.pred) {
-            e.state = 'action'; 
-            move(e, getBestMove(e, nearest.pred.x, nearest.pred.y, true));
-            e.stamina -= 2;
-        } else {
-            e.state = 'idle';
-            let nearbyFood = scanTerrain(e, 12, 'food');
-            if(nearbyFood && e.energy < e.maxEnergy * 0.9) {
-                move(e, getBestMove(e, nearbyFood.x, nearbyFood.y, false));
-            } else {
-                if(Math.random() < 0.25) move(e, getRandomMove(e));
-                else e.stamina = Math.min(100, e.stamina + 2);
-            }
-        }
-        if(e.energy > e.maxEnergy * CONF.preyBirthThresh) reproduce(e);
-    } else {
-        if(nearest.prey) {
-            e.state = 'action';
-            let target = nearest.prey;
-            move(e, getBestMove(e, target.x, target.y, false));
-            if(e.stamina > 15) {
-                 move(e, getBestMove(e, target.x, target.y, false));
-                 e.stamina -= CONF.predHuntCost;
-            }
-        } else {
-            e.state = 'idle';
-            if(Math.random() < 0.5) move(e, getRandomMove(e));
-            else e.stamina = Math.min(100, e.stamina + 3);
-        }
-        if(e.reproTimer === 0 && e.energy > e.maxEnergy * CONF.predBirthThresh) reproduce(e);
-    }
-}
-
-function getNearestNeighbor(e) {
-    let closestPred = null, closestPrey = null;
-    let minDistPred = VISION_SQ, minDistPrey = VISION_SQ;
-    let sx = Math.floor(e.x / SECTOR_SIZE), sy = Math.floor(e.y / SECTOR_SIZE);
-
-    for(let dy = -1; dy <= 1; dy++) {
-        for(let dx = -1; dx <= 1; dx++) {
-            let nsx = (sx + dx + sCols) % sCols;
-            let nsy = (sy + dy + sRows) % sRows;
-            let sector = sectors[nsy * sCols + nsx];
-            if(!sector) continue;
-            for(let other of sector) {
-                if(other === e || other.dead) continue;
-                let diffX = Math.abs(e.x - other.x);
-                let diffY = Math.abs(e.y - other.y);
-                if(diffX > cols/2) diffX = cols - diffX;
-                if(diffY > rows/2) diffY = rows - diffY;
-                let dSq = diffX*diffX + diffY*diffY;
-                if(dSq <= VISION_SQ) {
-                    if(other.type === 'predator') {
-                        if(dSq < minDistPred) { minDistPred = dSq; closestPred = other; }
-                    } else {
-                        if(dSq < minDistPrey) { minDistPrey = dSq; closestPrey = other; }
-                    }
-                }
-            }
-        }
-    }
-    return { pred: closestPred, prey: closestPrey };
-}
-
-function scanTerrain(e, range, type) {
-    let best = null, minD = range * range + 1; 
-    for(let dx = -range; dx <= range; dx++) {
-        for(let dy = -range; dy <= range; dy++) {
-            let nx = (e.x+dx+cols)%cols, ny = (e.y+dy+rows)%rows;
-            if(grid.terrain[nx][ny] === type) {
-                let dSq = dx*dx + dy*dy;
-                if(dSq < minD) { minD = dSq; best = {x:nx, y:ny}; }
-            }
-        }
-    }
-    return best;
-}
-
-const MOVES = [{x:0,y:-1},{x:1,y:-1},{x:1,y:0},{x:1,y:1},{x:0,y:1},{x:-1,y:1},{x:-1,y:0},{x:-1,y:-1}];
-const SIMPLE_MOVES = [{x:0,y:-1},{x:1,y:0},{x:0,y:1},{x:-1,y:0}];
-
-function getBestMove(e, tx, ty, flee) {
-    let best = null, score = flee ? -1 : Infinity;
-    let idxs = [0,1,2,3,4,5,6,7];
-    for (let i = idxs.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [idxs[i], idxs[j]] = [idxs[j], idxs[i]];
-    }
-    for(let i of idxs) {
-        let m = MOVES[i];
-        let nx=(e.x+m.x+cols)%cols, ny=(e.y+m.y+rows)%rows;
-        if(grid.terrain[nx][ny] === 'rock') continue;
-        let occ = grid.entities[nx][ny];
-        if(occ && occ.type === e.type) continue; 
-        let dx = Math.abs(nx - tx), dy = Math.abs(ny - ty);
-        if(dx > cols/2) dx = cols-dx;
-        if(dy > rows/2) dy = rows-dy;
-        let dSq = dx*dx + dy*dy;
-        if(flee) { if(dSq > score) { score = dSq; best = {x:nx, y:ny}; } }
-        else { if(dSq < score) { score = dSq; best = {x:nx, y:ny}; } }
-    }
-    return best;
-}
-
-function getRandomMove(e) {
-    let idxs = [0,1,2,3];
-    for (let i = idxs.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [idxs[i], idxs[j]] = [idxs[j], idxs[i]];
-    }
-    for(let i of idxs) {
-        let m = SIMPLE_MOVES[i];
-        let nx=(e.x+m.x+cols)%cols, ny=(e.y+m.y+rows)%rows;
-        if(grid.terrain[nx][ny]!=='rock' && !grid.entities[nx][ny]) return {x:nx,y:ny};
-    }
-    return null;
-}
-
-function move(e, dest) {
-    if(!dest) return;
-    let tEnt = grid.entities[dest.x][dest.y];
-    let tTerr = grid.terrain[dest.x][dest.y];
-    if(e.type === 'predator' && tEnt && tEnt.type === 'prey') {
-        e.energy = Math.min(e.maxEnergy, e.energy + CONF.predGainPrey);
-        e.isSleeping = true; e.sleepTimer = 20; 
-        die(tEnt); updatePos(e, dest.x, dest.y);
-    } 
-    else if(e.type === 'prey' && tTerr === 'food') {
-        e.energy = Math.min(e.maxEnergy, e.energy + CONF.preyGainFood);
-        grid.terrain[dest.x][dest.y] = null; updatePos(e, dest.x, dest.y);
-    }
-    else if(!tEnt) updatePos(e, dest.x, dest.y);
-}
-function updatePos(e, nx, ny) { grid.entities[e.x][e.y] = null; e.x = nx; e.y = ny; grid.entities[nx][ny] = e; }
-function reproduce(e) {
-    let idxs = [0,1,2,3,4,5,6,7];
-    for (let i = idxs.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [idxs[i], idxs[j]] = [idxs[j], idxs[i]];
-    }
-    for(let i of idxs) {
-        let m = MOVES[i];
-        let nx=(e.x+m.x+cols)%cols, ny=(e.y+m.y+rows)%rows;
-        if(!grid.entities[nx][ny] && grid.terrain[nx][ny]!=='rock') {
-             let cost = (e.type === 'predator') ? CONF.predBirthCost : CONF.preyBirthCost;
-             if(e.energy > cost) {
-                let baby = new Entity(nx, ny, e.type);
-                e.energy -= cost;
-                if(e.type === 'predator') e.reproTimer = CONF.predReproCooldown;
-                grid.entities[nx][ny] = baby;
-                entities.push(baby);
-             }
-             return;
-        }
-    }
-}
-function die(e) { e.dead = true; if(grid.entities[e.x][e.y] === e) grid.entities[e.x][e.y] = null; }
-function rInt(n) { return Math.floor(Math.random()*n); }
-
-// --- RENDERING & ASSETS ---
-function generateSprites() {
-    const types = ['prey', 'predator'];
-    const states = ['idle', 'action', 'sleep'];
-    const drawFace = (ctx, color, type, state) => {
-        let size = 64, cx = 32, cy = 32;
-        ctx.beginPath(); ctx.fillStyle = color; ctx.arc(cx, cy, 28, 0, Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.arc(cx-10, cy-10, 10, 0, Math.PI*2); ctx.fill();
-        if(state === 'sleep') {
-            ctx.strokeStyle = '#333'; ctx.lineWidth = 3;
-            ctx.beginPath(); ctx.moveTo(cx-15, cy); ctx.lineTo(cx-5, cy); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(cx+5, cy); ctx.lineTo(cx+15, cy); ctx.stroke();
-            ctx.fillStyle = '#fff'; ctx.font = 'bold 14px monospace'; ctx.fillText('z', cx+10, cy-15);
-        } else {
-            ctx.fillStyle = '#fff';
-            let eyeSize = (state === 'action' && type === 'prey') ? 10 : 8;
-            ctx.beginPath(); ctx.arc(cx-10, cy-5, eyeSize, 0, Math.PI*2); ctx.fill();
-            ctx.beginPath(); ctx.arc(cx+10, cy-5, eyeSize, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = '#000'; let pSize = 3;
-            ctx.beginPath(); ctx.arc(cx-10, cy-5, pSize, 0, Math.PI*2); ctx.fill();
-            ctx.beginPath(); ctx.arc(cx+10, cy-5, pSize, 0, Math.PI*2); ctx.fill();
-            if(type === 'predator') {
-                ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
-                ctx.beginPath(); ctx.moveTo(cx-18, cy-12); ctx.lineTo(cx-4, cy-8); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(cx+4, cy-8); ctx.lineTo(cx+18, cy-12); ctx.stroke();
-            }
-            ctx.beginPath(); ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
-            if(state === 'action' && type === 'prey') { ctx.arc(cx, cy+10, 6, 0, Math.PI*2); ctx.stroke(); } 
-            else if (type === 'predator') { ctx.moveTo(cx-8, cy+12); ctx.lineTo(cx+8, cy+12); ctx.stroke(); } 
-            else { ctx.arc(cx, cy+10, 8, 0, Math.PI, false); ctx.stroke(); }
-        }
-    };
-    types.forEach(t => {
-        states.forEach(s => {
-            let c = document.createElement('canvas'); c.width = 64; c.height = 64;
-            let x = c.getContext('2d');
-            let color = t === 'prey' ? '#00ccff' : '#ff2222';
-            if(s === 'action') color = t === 'prey' ? '#aaf' : '#ff0000';
-            drawFace(x, color, t, s);
-            spriteCache[`${t}_${s}`] = c;
-        });
-    });
+    canvas.addEventListener('touchend', e => { e.preventDefault(); if(e.touches.length < 2) isPinching = false; if(e.touches.length === 0) isDragging = false; if(e.touches.length === 1) { lastMouse = {x: e.touches[0].clientX, y: e.touches[0].clientY}; isDragging = true; }});
 }
 
 function setupUI() {
-    const bind = (key, isPercentage = false) => {
-        const input = document.getElementById('in-' + key);
-        const label = document.getElementById('lbl-' + key);
-        let val = CONF[key];
-        if (isPercentage) val *= 100; 
-        input.value = parseFloat(val.toPrecision(6));
-        const updateLabel = () => label.innerText = input.value + (isPercentage ? '%' : '');
-        updateLabel();
-        input.oninput = () => {
-            updateLabel();
-            let newVal = parseFloat(input.value);
-            if (isPercentage) newVal /= 100;
-            CONF[key] = newVal;
-            if(key === 'visionRange') VISION_SQ = CONF.visionRange * CONF.visionRange;
-        };
+    const bind = (k, p=false) => {
+        const i = document.getElementById('in-'+k), l = document.getElementById('lbl-'+k);
+        const up = () => l.innerText = i.value + (p?'%':'');
+        i.value = parseFloat((CONF[k]*(p?100:1)).toPrecision(6)); up();
+        i.oninput = () => { up(); CONF[k] = parseFloat(i.value)/(p?100:1); if(k==='visionRange') VISION_SQ=CONF[k]**2; };
     };
-    bind('mapSize'); bind('simSpeed');
-    bind('densityPrey', true); bind('densityPred', true);
+    bind('mapSize'); bind('simSpeed'); bind('densityPrey',1); bind('densityPred',1);
     bind('preyMetabolism'); bind('preyBirthCost'); bind('preyGainFood');
-    bind('predMetabolism'); bind('predBirthCost'); bind('predHuntCost');
-    bind('foodSpawnRate');
+    bind('predMetabolism'); bind('predBirthCost'); bind('predHuntCost'); bind('foodSpawnRate');
 }
 function setTool(t) {
-    currentTool = t;
-    canvas.style.cursor = (t === 'pan') ? 'grab' : 'crosshair';
+    currentTool = t; canvas.style.cursor = (t === 'pan') ? 'grab' : 'crosshair';
     document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-    let btnId = 'tool-' + (t === 'predator' ? 'pred' : t);
-    document.getElementById(btnId).classList.add('active');
+    document.getElementById('tool-' + (t === 'predator' ? 'pred' : t)).classList.add('active');
 }
 function togglePanel() { document.getElementById('panel').classList.toggle('open'); }
 function togglePause() { isPaused = !isPaused; document.getElementById('btn-pause').innerText = isPaused ? "Resume" : "Pause"; }
 
-function draw() {
-    ctx.fillStyle = '#050505';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+// --- SIMULATION CORE ---
+function restartSim() {
+    cols = CONF.mapSize; rows = CONF.mapSize;
+    let worldW = cols * BASE_TILE_SIZE;
+    let worldH = rows * BASE_TILE_SIZE;
+    if(window.innerWidth < 768) {
+        let targetZoom = (canvas.width * 0.95) / worldW;
+        camera.zoom = Math.max(0.2, Math.min(targetZoom, 3.0));
+    } else camera.zoom = 1.0;
+    camera.x = (canvas.width - worldW * camera.zoom) / 2;
+    camera.y = (canvas.height - worldH * camera.zoom) / 2;
+    SECTOR_SIZE = Math.ceil(CONF.visionRange); 
+    sCols = Math.ceil(cols / SECTOR_SIZE); sRows = Math.ceil(rows / SECTOR_SIZE);
+    grid = { terrain: new Array(cols).fill(0).map(()=>new Array(rows).fill(null)), entities: new Array(cols).fill(0).map(()=>new Array(rows).fill(null)) };
+    entities = []; popHistory = [];
+    const total = cols * rows;
+    spawnTerrain('rock', total * CONF.densityRock); spawnTerrain('food', total * 0.15);
+    spawnEntity('prey', Math.max(1, Math.floor(total * CONF.densityPrey)));
+    spawnEntity('predator', Math.max(1, Math.floor(total * CONF.densityPred)));
+}
 
-    ctx.save();
-    ctx.translate(camera.x, camera.y);
-    ctx.scale(camera.zoom, camera.zoom);
+function loop(ts) {
+    requestAnimationFrame(loop);
+    if (!lastTime) { lastTime = ts; return; }
+    const dt = ts - lastTime; lastTime = ts;
+    fpsTimer += dt;
+    if (fpsTimer >= 1000) { document.getElementById('dispFps').innerText = frameCount; frameCount = 0; fpsTimer -= 1000; }
 
-    // Calculate Visible Area
-    let startCol = Math.floor(-camera.x / (BASE_TILE_SIZE * camera.zoom));
-    let startRow = Math.floor(-camera.y / (BASE_TILE_SIZE * camera.zoom));
-    let viewCols = Math.ceil(canvas.width / (BASE_TILE_SIZE * camera.zoom));
-    let viewRows = Math.ceil(canvas.height / (BASE_TILE_SIZE * camera.zoom));
+    const fpsInterval = 1000 / CONF.simSpeed;
+    const elapsed = ts - lastFrameTime;
+    const interacting = isDragging || isPinching;
 
-    let pad = 2; 
-    let minX = Math.max(0, startCol - pad);
-    let maxX = Math.min(cols, startCol + viewCols + pad);
-    let minY = Math.max(0, startRow - pad);
-    let maxY = Math.min(rows, startRow + viewRows + pad);
+    if (elapsed > fpsInterval || interacting) {
+        if (elapsed > fpsInterval) { lastFrameTime = ts - (elapsed % fpsInterval); if(!isPaused) update(); }
+        draw(); frameCount++;
+    }
+}
 
-    let drawSize = BASE_TILE_SIZE;
-    let useSprites = (drawSize * camera.zoom) > 12;
+class Entity {
+    constructor(x, y, type) {
+        this.x = x; this.y = y; this.type = type; this.dead = false; this.age = 0;
+        this.maxAge = (type === 'prey') ? CONF.preyLife : CONF.predLife;
+        this.energy = (type === 'prey') ? 60 : 250;
+        this.maxEnergy = (type === 'prey') ? CONF.preyEnergyMax : CONF.predEnergyMax;
+        this.stamina = 100; this.isSleeping = false; this.sleepTimer = 0; this.reproTimer = 0; this.state = 'idle'; 
+    }
+}
+function spawnTerrain(t, c) { for(let i=0; i<c; i++) { let x=rInt(cols),y=rInt(rows); if(!grid.terrain[x][y] && !grid.entities[x][y]) grid.terrain[x][y] = t; } }
+function spawnEntity(t, c) { 
+    let s=0, a=0; while(s<c && a<c*10) { let x=rInt(cols),y=rInt(rows); 
+    if(grid.terrain[x][y] !== 'rock' && !grid.entities[x][y]) { let e=new Entity(x,y,t); grid.entities[x][y]=e; entities.push(e); s++; } a++; } 
+}
+function die(e) { e.dead = true; if(grid.entities[e.x][e.y] === e) grid.entities[e.x][e.y] = null; }
+function rInt(n) { return Math.floor(Math.random()*n); }
 
-    // Draw Map Background
-    ctx.fillStyle = '#111';
-    ctx.fillRect(0, 0, cols * BASE_TILE_SIZE, rows * BASE_TILE_SIZE);
-
-    for(let x = minX; x < maxX; x++) {
-        for(let y = minY; y < maxY; y++) {
-            let t = grid.terrain[x][y];
-            let px = x * BASE_TILE_SIZE;
-            let py = y * BASE_TILE_SIZE;
-
-            if(t === 'rock') {
-                ctx.fillStyle = '#222'; ctx.fillRect(px, py, drawSize, drawSize);
-                ctx.fillStyle = '#333'; ctx.fillRect(px+1, py+1, drawSize-2, drawSize-2);
-            } else if (t === 'food') {
-                ctx.fillStyle = '#004400'; ctx.beginPath();
-                ctx.arc(px+drawSize/2, py+drawSize/2, drawSize/3, 0, Math.PI*2); ctx.fill();
-            }
-
-            let e = grid.entities[x][y];
-            if(e) {
-                if(useSprites) {
-                    let state = 'idle';
-                    if(e.isSleeping) state = 'sleep';
-                    else if(e.state === 'action') state = 'action';
-                    let img = spriteCache[`${e.type}_${state}`];
-                    if(img) ctx.drawImage(img, px, py, drawSize, drawSize);
-                } else {
-                    if(e.type==='prey') ctx.fillStyle = (e.state==='action') ? '#fff' : '#00ccff';
-                    else ctx.fillStyle = (e.state==='action') ? '#ff0000' : '#550000';
-                    ctx.fillRect(px, py, drawSize, drawSize);
-                    if(e.isSleeping) { ctx.fillStyle = '#ff0'; ctx.fillRect(px+drawSize/4, py+drawSize/4, drawSize/2, drawSize/2); }
-                }
+function update() {
+    for(let i=0; i<CONF.foodSpawnRate; i++) { let x=rInt(cols),y=rInt(rows); if(!grid.terrain[x][y]&&!grid.entities[x][y]) grid.terrain[x][y]='food'; }
+    let alive = []; for(let e of entities) if(!e.dead) alive.push(e); entities = alive;
+    for (let i=entities.length-1; i>0; i--) { const j=Math.floor(Math.random()*(i+1)); [entities[i], entities[j]]=[entities[j], entities[i]]; }
+    
+    sectors = new Array(sCols * sRows).fill(null).map(()=>[]);
+    for(let e of entities) { let sx=Math.floor(e.x/SECTOR_SIZE), sy=Math.floor(e.y/SECTOR_SIZE); if(sx>=0 && sx<sCols && sy>=0 && sy<sRows) sectors[sy*sCols+sx].push(e); }
+    let cPrey = 0, cPred = 0;
+    for (let e of entities) {
+        if(e.dead) continue; e.type === 'prey' ? cPrey++ : cPred++; e.age++;
+        e.energy -= (e.type === 'predator') ? CONF.predMetabolism : CONF.preyMetabolism;
+        if(e.reproTimer > 0) e.reproTimer--;
+        if(e.energy <= 0 || e.age >= e.maxAge) { die(e); continue; }
+        if(e.isSleeping) { e.stamina += 5; e.sleepTimer--; if(e.sleepTimer <= 0 && e.stamina >= 100) e.isSleeping = false; continue; }
+        if(e.stamina <= 0) { e.isSleeping = true; continue; }
+        runAI(e);
+    }
+    document.getElementById('dispPrey').innerText = cPrey; document.getElementById('dispPred').innerText = cPred;
+    updateGraph(cPrey, cPred);
+}
+function runAI(e) {
+    let n = getNearestNeighbor(e);
+    if(e.type === 'prey') {
+        if(n.pred) { e.state = 'action'; move(e, getBestMove(e, n.pred.x, n.pred.y, true)); e.stamina -= 2; } 
+        else { e.state = 'idle'; let f = scanTerrain(e, 12, 'food'); 
+            if(f && e.energy < e.maxEnergy * 0.9) move(e, getBestMove(e, f.x, f.y, false)); 
+            else if(Math.random() < 0.25) move(e, getRandomMove(e)); else e.stamina = Math.min(100, e.stamina+2); 
+        }
+        if(e.energy > e.maxEnergy * CONF.preyBirthThresh) reproduce(e);
+    } else {
+        if(n.prey) { e.state = 'action'; let t = n.prey; move(e, getBestMove(e, t.x, t.y, false)); if(e.stamina > 15) { move(e, getBestMove(e, t.x, t.y, false)); e.stamina -= CONF.predHuntCost; } } 
+        else { e.state = 'idle'; if(Math.random() < 0.5) move(e, getRandomMove(e)); else e.stamina = Math.min(100, e.stamina+3); }
+        if(e.reproTimer === 0 && e.energy > e.maxEnergy * CONF.predBirthThresh) reproduce(e);
+    }
+}
+function getNearestNeighbor(e) {
+    let cp=null, cy=null, mdp=VISION_SQ, mdy=VISION_SQ;
+    let sx = Math.floor(e.x/SECTOR_SIZE), sy = Math.floor(e.y/SECTOR_SIZE);
+    for(let dy=-1; dy<=1; dy++) for(let dx=-1; dx<=1; dx++) {
+        let nsx=(sx+dx+sCols)%sCols, nsy=(sy+dy+sRows)%sRows;
+        let sec = sectors[nsy*sCols+nsx]; if(!sec) continue;
+        for(let o of sec) {
+            if(o===e || o.dead) continue;
+            let dfx=Math.abs(e.x-o.x), dfy=Math.abs(e.y-o.y);
+            if(dfx>cols/2) dfx=cols-dfx; if(dfy>rows/2) dfy=rows-dfy;
+            let dSq=dfx*dfx+dfy*dfy;
+            if(dSq<=VISION_SQ) {
+                if(o.type==='predator') { if(dSq<mdp) { mdp=dSq; cp=o; } } 
+                else { if(dSq<mdy) { mdy=dSq; cy=o; } }
             }
         }
     }
-    
-    // Draw Map Border
-    ctx.strokeStyle = '#444'; ctx.lineWidth = 2;
-    ctx.strokeRect(0,0, cols*BASE_TILE_SIZE, rows*BASE_TILE_SIZE);
-
-    ctx.restore();
+    return { pred: cp, prey: cy };
+}
+function scanTerrain(e, r, t) {
+    let b=null, md=r*r+1; for(let dx=-r; dx<=r; dx++) for(let dy=-r; dy<=r; dy++) {
+        let nx=(e.x+dx+cols)%cols, ny=(e.y+dy+rows)%rows;
+        if(grid.terrain[nx][ny]===t) { let dSq=dx*dx+dy*dy; if(dSq<md) { md=dSq; b={x:nx, y:ny}; } }
+    } return b;
+}
+const MOVES = [{x:0,y:-1},{x:1,y:-1},{x:1,y:0},{x:1,y:1},{x:0,y:1},{x:-1,y:1},{x:-1,y:0},{x:-1,y:-1}];
+function getBestMove(e, tx, ty, flee) {
+    let b=null, sc=flee?-1:Infinity, idx=[0,1,2,3,4,5,6,7];
+    for (let i=7; i>0; i--) { const j=Math.floor(Math.random()*(i+1)); [idx[i], idx[j]]=[idx[j], idx[i]]; }
+    for(let i of idx) {
+        let m=MOVES[i], nx=(e.x+m.x+cols)%cols, ny=(e.y+m.y+rows)%rows;
+        if(grid.terrain[nx][ny]==='rock') continue;
+        let occ=grid.entities[nx][ny]; if(occ && occ.type===e.type) continue;
+        let dx=Math.abs(nx-tx), dy=Math.abs(ny-ty); if(dx>cols/2) dx=cols-dx; if(dy>rows/2) dy=rows-dy;
+        let dSq=dx*dx+dy*dy;
+        if(flee) { if(dSq>sc) { sc=dSq; b={x:nx,y:ny}; } } else { if(dSq<sc) { sc=dSq; b={x:nx,y:ny}; } }
+    } return b;
+}
+function getRandomMove(e) {
+    let idx=[0,2,4,6]; for (let i=3; i>0; i--) { const j=Math.floor(Math.random()*(i+1)); [idx[i], idx[j]]=[idx[j], idx[i]]; }
+    for(let i of idx) { let m=MOVES[i], nx=(e.x+m.x+cols)%cols, ny=(e.y+m.y+rows)%rows; if(grid.terrain[nx][ny]!=='rock' && !grid.entities[nx][ny]) return {x:nx,y:ny}; } return null;
+}
+function move(e, d) {
+    if(!d) return; let te=grid.entities[d.x][d.y], tt=grid.terrain[d.x][d.y];
+    if(e.type==='predator' && te && te.type==='prey') { e.energy=Math.min(e.maxEnergy, e.energy+CONF.predGainPrey); e.isSleeping=true; e.sleepTimer=20; die(te); upPos(e,d.x,d.y); }
+    else if(e.type==='prey' && tt==='food') { e.energy=Math.min(e.maxEnergy, e.energy+CONF.preyGainFood); grid.terrain[d.x][d.y]=null; upPos(e,d.x,d.y); }
+    else if(!te) upPos(e,d.x,d.y);
+}
+function upPos(e,nx,ny) { grid.entities[e.x][e.y]=null; e.x=nx; e.y=ny; grid.entities[nx][ny]=e; }
+function reproduce(e) {
+    let idx=[0,1,2,3,4,5,6,7]; for (let i=7; i>0; i--) { const j=Math.floor(Math.random()*(i+1)); [idx[i], idx[j]]=[idx[j], idx[i]]; }
+    for(let i of idx) {
+        let m=MOVES[i], nx=(e.x+m.x+cols)%cols, ny=(e.y+m.y+rows)%rows;
+        if(!grid.entities[nx][ny] && grid.terrain[nx][ny]!=='rock') {
+             let c = (e.type==='predator') ? CONF.predBirthCost : CONF.preyBirthCost;
+             if(e.energy > c) { let b=new Entity(nx,ny,e.type); e.energy-=c; if(e.type==='predator') e.reproTimer=CONF.predReproCooldown; grid.entities[nx][ny]=b; entities.push(b); } return;
+        }
+    }
 }
 
-function updateGraph(preyCount, predCount) {
-    popHistory.push({ p: preyCount, r: predCount });
-    if(popHistory.length > MAX_HISTORY) popHistory.shift();
-    const w = graphCanvas.width, h = graphCanvas.height;
-    graphCtx.clearRect(0, 0, w, h);
-    let maxVal = 10;
-    for(let d of popHistory) maxVal = Math.max(maxVal, d.p, d.r);
-    const getY = (val) => h - ((val / maxVal) * (h - 10)) - 5; 
-    const getX = (i) => (i / (MAX_HISTORY-1)) * w;
+function updateGraph(prey, pred) {
+    popHistory.push({ p: prey, r: pred }); if(popHistory.length > MAX_HISTORY) popHistory.shift();
+    const w = graphCanvas.width, h = graphCanvas.height; graphCtx.clearRect(0, 0, w, h);
+    let maxVal = 10; for(let d of popHistory) maxVal = Math.max(maxVal, d.p, d.r);
+    const getY = (val) => h - ((val / maxVal) * (h - 10)) - 5, getX = (i) => (i / (MAX_HISTORY-1)) * w;
     if(popHistory.length < 2) return;
     const drawLine = (prop, color) => {
         graphCtx.beginPath(); graphCtx.strokeStyle = color; graphCtx.lineWidth = 2;
         graphCtx.moveTo(0, getY(popHistory[0][prop]));
-        for(let i=1; i<popHistory.length; i++) graphCtx.lineTo(getX(i), getY(popHistory[i][prop]));
-        graphCtx.stroke();
+        for(let i=1; i<popHistory.length; i++) graphCtx.lineTo(getX(i), getY(popHistory[i][prop])); graphCtx.stroke();
     };
     drawLine('p', '#00ccff'); drawLine('r', '#ff2222');
+}
+
+// --- WEBGL RENDERER ---
+function draw() {
+    gl.clearColor(0.02, 0.02, 0.02, 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    // 1. Calculate Matrix
+    // Projection: Map 0..width to -1..1
+    // View: Camera transform
+    const w = canvas.width, h = canvas.height;
+    const z = camera.zoom;
+    const tx = camera.x, ty = camera.y;
+    
+    // Standard 2D projection matrix
+    // X: 2/w, Y: -2/h, TransX: -1, TransY: 1
+    // We combine view+projection in one go
+    const m00 = (2 * z) / w;
+    const m11 = -(2 * z) / h; // Flip Y
+    const m20 = (2 * (tx * z)) / w - 1; // Translation logic adjusted for center? No, simpler:
+    // Let's transform World -> Screen -> Clip
+    // ScreenX = (WorldX * z) + cx
+    // ClipX = (ScreenX / w) * 2 - 1
+    // ClipX = ((WorldX * z + cx) / w) * 2 - 1
+    // ClipX = WorldX * (2z/w) + (2cx/w - 1)
+    
+    const mat = [
+        (2 * z) / w, 0, 0,
+        0, -(2 * z) / h, 0,
+        (2 * (tx)) / w - 1, -(2 * (ty)) / h + 1, 1 // Fixed logic for top-left 0,0
+    ];
+
+    gl.uniformMatrix3fv(glState.locMatrix, false, mat);
+
+    // 2. Collect Instances
+    // We cull in JS to save buffer upload size, though GPU can handle more
+    let iData = glState.instanceData;
+    let count = 0;
+    
+    let startCol = Math.floor(-camera.x / (BASE_TILE_SIZE * z));
+    let startRow = Math.floor(-camera.y / (BASE_TILE_SIZE * z));
+    let viewCols = Math.ceil(w / (BASE_TILE_SIZE * z));
+    let viewRows = Math.ceil(h / (BASE_TILE_SIZE * z));
+    let pad = 2;
+    let minX = Math.max(0, startCol - pad), maxX = Math.min(cols, startCol + viewCols + pad);
+    let minY = Math.max(0, startRow - pad), maxY = Math.min(rows, startRow + viewRows + pad);
+    
+    // Use larger sprites when zoomed in
+    let drawSize = BASE_TILE_SIZE; 
+    // Push function
+    const push = (x,y,type) => {
+        let idx = count * 4;
+        iData[idx] = x * BASE_TILE_SIZE;
+        iData[idx+1] = y * BASE_TILE_SIZE;
+        iData[idx+2] = drawSize;
+        iData[idx+3] = type;
+        count++;
+    };
+
+    for(let x = minX; x < maxX; x++) {
+        for(let y = minY; y < maxY; y++) {
+            let t = grid.terrain[x][y];
+            if(t === 'rock') push(x,y, SID.ROCK);
+            else if (t === 'food') push(x,y, SID.FOOD);
+            
+            let e = grid.entities[x][y];
+            if(e) {
+                if(e.type === 'prey') {
+                    if(e.isSleeping) push(x,y, SID.PREY_SLP);
+                    else if(e.state === 'action') push(x,y, SID.PREY_ACT);
+                    else push(x,y, SID.PREY);
+                } else {
+                    if(e.isSleeping) push(x,y, SID.PRED_SLP);
+                    else if(e.state === 'action') push(x,y, SID.PRED_ACT);
+                    else push(x,y, SID.PRED);
+                }
+            }
+        }
+    }
+
+    // 3. Draw
+    gl.bindBuffer(gl.ARRAY_BUFFER, glState.instanceBuffer);
+    gl.bufferSubData(gl.ARRAY_BUFFER, 0, iData.subarray(0, count * 4));
+    gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, count);
 }
 </script>
 </body>
