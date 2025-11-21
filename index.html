@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>EcoSim Mobile</title>
+    <title>EcoSim Mobile Optimized</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #050505; font-family: 'Segoe UI', Roboto, monospace; color: #ccc; touch-action: none; }
         canvas { display: block; touch-action: none; }
@@ -114,7 +114,7 @@
                 </div>
                 <div class="control-group">
                     <div class="control-label">Target FPS <span class="val-display" id="lbl-simSpeed"></span></div>
-                    <input type="range" id="in-simSpeed" min="1" max="60" step="1">
+                    <input type="range" id="in-simSpeed" min="1" max="120" step="1">
                 </div>
             </div>
             <!-- Sim Parameters -->
@@ -262,10 +262,8 @@ function setupInput() {
             grid.terrain[p.x][p.y] = null;
             return;
         }
-        // Block placement on rock
         if (grid.terrain[p.x][p.y] === 'rock' && (currentTool === 'prey' || currentTool === 'predator' || currentTool === 'food')) return; 
         
-        // Rock/Food placement
         if(currentTool === 'rock' || currentTool === 'food') {
              if(grid.entities[p.x][p.y]) {
                  grid.entities[p.x][p.y].dead = true;
@@ -274,7 +272,6 @@ function setupInput() {
              grid.terrain[p.x][p.y] = currentTool;
              return;
         }
-        // Entity placement
         if((currentTool === 'prey' || currentTool === 'predator') && !grid.entities[p.x][p.y]) {
             let ent = new Entity(p.x, p.y, currentTool);
             entities.push(ent);
@@ -303,16 +300,12 @@ function setupInput() {
     });
     canvas.addEventListener('wheel', e => {
         e.preventDefault();
-        // Standard Zoom to Mouse Position
         const rect = canvas.getBoundingClientRect();
         const mx = e.clientX - rect.left;
         const my = e.clientY - rect.top;
         const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
-        
         let newZoom = camera.zoom * zoomFactor;
         newZoom = Math.max(0.1, Math.min(newZoom, 20));
-        
-        // formula: newCam = mouse - (mouse - oldCam) * (newZoom / oldZoom)
         let scaleChange = newZoom / camera.zoom;
         camera.x = mx - (mx - camera.x) * scaleChange;
         camera.y = my - (my - camera.y) * scaleChange;
@@ -356,24 +349,15 @@ function setupInput() {
         e.preventDefault();
 
         if(isPinching && e.touches.length === 2) {
-            // 1. Calculate Scale
             let dist = getTouchDist(e);
             let center = getTouchCenter(e);
             let zoomChange = dist / lastTouchDist;
-            
             let newZoom = camera.zoom * zoomChange;
             newZoom = Math.max(0.1, Math.min(newZoom, 20));
-            
-            // Re-calculate effective change after clamping
             let effectiveChange = newZoom / camera.zoom; 
             camera.zoom = newZoom;
-
-            // 2. Apply Zoom Centering & Pan
-            // Formula: NewCam = NewCenter - (OldCenter - OldCam) * effectiveChange
-            // This moves the point under 'lastPinchCenter' to 'center' while scaling.
             camera.x = center.x - (lastPinchCenter.x - camera.x) * effectiveChange;
             camera.y = center.y - (lastPinchCenter.y - camera.y) * effectiveChange;
-
             lastTouchDist = dist;
             lastPinchCenter = center;
 
@@ -393,7 +377,6 @@ function setupInput() {
         e.preventDefault();
         if(e.touches.length < 2) isPinching = false;
         if(e.touches.length === 0) isDragging = false;
-        // Reset last mouse if switching back to 1 finger
         if(e.touches.length === 1) {
              lastMouse = {x: e.touches[0].clientX, y: e.touches[0].clientY};
              isDragging = true;
@@ -404,20 +387,16 @@ function setupInput() {
 function restartSim() {
     cols = CONF.mapSize; rows = CONF.mapSize;
     
-    // --- AUTO FIT CAMERA ---
     let worldW = cols * BASE_TILE_SIZE;
     let worldH = rows * BASE_TILE_SIZE;
     
-    // Calculate zoom to fit width (with margin)
     if(window.innerWidth < 768) {
-        // Mobile: Fit to width, maybe slightly zoomed out to see borders
         let targetZoom = (canvas.width * 0.9) / worldW;
         camera.zoom = Math.max(0.2, Math.min(targetZoom, 3.0));
     } else {
         camera.zoom = 1.0;
     }
 
-    // Center the map based on the calculated zoom
     camera.x = (canvas.width - worldW * camera.zoom) / 2;
     camera.y = (canvas.height - worldH * camera.zoom) / 2;
 
@@ -439,20 +418,39 @@ function restartSim() {
 
 function loop(timestamp) {
     requestAnimationFrame(loop);
+    
+    if (!lastTime) { lastTime = timestamp; return; }
+    const dt = timestamp - lastTime;
+    lastTime = timestamp;
+    fpsTimer += dt;
+
+    // FPS Display Update
+    if (fpsTimer >= 1000) {
+        document.getElementById('dispFps').innerText = frameCount;
+        frameCount = 0;
+        fpsTimer -= 1000; // Keep remainder for accuracy
+    }
+
     const fpsInterval = 1000 / CONF.simSpeed;
     const elapsed = timestamp - lastFrameTime;
 
-    if (!lastTime) lastTime = timestamp;
-    const dt = timestamp - lastTime; 
-    lastTime = timestamp;
-    frameCount++; fpsTimer += dt;
-    if (fpsTimer >= 1000) { document.getElementById('dispFps').innerText = frameCount; frameCount = 0; fpsTimer = 0; }
+    // Performance: Only render/update at target FPS, 
+    // UNLESS interacting (smooth scrolling)
+    const interacting = isDragging || isPinching;
 
-    if (elapsed > fpsInterval) {
-        lastFrameTime = timestamp - (elapsed % fpsInterval);
-        if(!isPaused) update();
+    if (elapsed > fpsInterval || interacting) {
+        // If we are just interacting, we don't advance physics, only time
+        // If elapsed > interval, we advance physics
+        
+        if (elapsed > fpsInterval) {
+            lastFrameTime = timestamp - (elapsed % fpsInterval);
+            if(!isPaused) update();
+        }
+        
+        // Always draw if we updated OR if we are moving camera
+        draw();
+        frameCount++;
     }
-    draw();
 }
 
 // --- LOGIC & ENTITIES ---
